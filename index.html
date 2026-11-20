@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SQL Café</title>
+<meta name="description" content="SQL Café: learn SQL in eight short, friendly lessons, explained through a café menu, with animated playgrounds, missions and quizzes.">
+<link rel="canonical" href="https://learn.masshai.com/">
+<meta property="og:title" content="SQL Café: learn SQL the easy way">
+<meta property="og:description" content="A free course in eight short lessons, explained through a café menu. By MASSH AI.">
+<meta property="og:url" content="https://learn.masshai.com/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%234263EB%27/%3E%3Cpath d=%27M16 24h26v14a10 10 0 0 1-10 10h-6a10 10 0 0 1-10-10z%27 fill=%27white%27/%3E%3Cpath d=%27M42 28h4a5 5 0 0 1 0 10h-4%27 stroke=%27white%27 stroke-width=%274%27 fill=%27none%27/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column. Each lesson card carries its lesson's own keyword colour as a top stripe, the same colours used inside the lessons. */
+:root{
+  --bg:#F3F6FC; --surface:#FFFFFF; --ink:#1A2340; --muted:#56617F; --line:#DCE3F0; --band:#E6ECFA;
+  --sel:#4263EB; --sel-soft:#E5EAFF; --from:#E07A00; --from-soft:#FFF0DC; --where:#D6336C; --where-soft:#FFE3EC;
+  --ord:#0C8599; --ord-soft:#DDF6FA; --lim:#5C940D; --lim-soft:#EBF7D6; --agg:#A16207; --agg-soft:#FEF3C7;
+  --grp:#9C36B5; --grp-soft:#F8E8FC; --sym:#7048E8; --sym-soft:#EFE9FF; --chg:#E03131; --chg-soft:#FFE8E8;
+  --mk:#9C5B2E; --mk-soft:#F6E8DC; --ok:#0B8A64; --ok-soft:#DCF5EC;
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif; --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif; --mono:"JetBrains Mono",Consolas,"Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10142A; --surface:#181E3A; --ink:#E8ECFA; --muted:#A0A9C9; --line:#2A3358; --band:#1C2448;
+  --sel:#8DA2FF; --sel-soft:#232E63; --from:#FFB04D; --from-soft:#3D2A10; --where:#FF7BA6; --where-soft:#45182B;
+  --ord:#3BC9DB; --ord-soft:#0F3A42; --lim:#A9E34B; --lim-soft:#2A3A12; --agg:#FCC419; --agg-soft:#3B3010;
+  --grp:#E599F7; --grp-soft:#3A1F45; --sym:#B39CFF; --sym-soft:#2D2360; --chg:#FF8787; --chg-soft:#46191C;
+  --mk:#E8A877; --mk-soft:#3A2618; --ok:#4FD6A5; --ok-soft:#123A30; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#10142A; --surface:#181E3A; --ink:#E8ECFA; --muted:#A0A9C9; --line:#2A3358; --band:#1C2448;
+  --sel:#8DA2FF; --sel-soft:#232E63; --from:#FFB04D; --from-soft:#3D2A10; --where:#FF7BA6; --where-soft:#45182B;
+  --ord:#3BC9DB; --ord-soft:#0F3A42; --lim:#A9E34B; --lim-soft:#2A3A12; --agg:#FCC419; --agg-soft:#3B3010;
+  --grp:#E599F7; --grp-soft:#3A1F45; --sym:#B39CFF; --sym-soft:#2D2360; --chg:#FF8787; --chg-soft:#46191C;
+  --mk:#E8A877; --mk-soft:#3A2618; --ok:#4FD6A5; --ok-soft:#123A30; color-scheme:dark }
+*{box-sizing:border-box;font-variant-ligatures:none}
+html,body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:40px 80px;display:flex;flex-direction:column;gap:64px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:clamp(2.6rem,7vw,4.2rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(1.6rem,4vw,2.2rem);font-weight:800}
+h3{font-size:1.25rem;font-weight:800}
+p{margin:0;max-width:62ch}
+a{color:var(--sel)}
+code{font-family:var(--mono)}
+.eyebrow{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:20px}
+.hero{display:flex;flex-direction:column;gap:22px;background:var(--band);border-radius:24px;padding:clamp(22px,5vw,48px)}
+.hero .lead{font-size:clamp(1.05rem,2.4vw,1.25rem)}
+.sqlline{font-family:var(--mono);font-size:clamp(.95rem,2.4vw,1.2rem);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 22px;max-width:640px;line-height:1.7}
+.k-sel{color:var(--sel);font-weight:700} .k-from{color:var(--from);font-weight:700} .k-where{color:var(--where);font-weight:700}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-block;font:700 1.05rem var(--body);padding:12px 22px;border-radius:12px;background:var(--ink);color:var(--bg);text-decoration:none}
+.btn:hover{opacity:.9}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+a:focus-visible,.btn:focus-visible{outline:3px solid var(--sel);outline-offset:3px}
+.welcome{font-weight:700;color:var(--ok)}
+.how{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.how{grid-template-columns:1fr}}
+.how div{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:6px}
+.how b{font-family:var(--display);font-size:1.1rem}
+.lessons{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.lessons{grid-template-columns:1fr}}
+.lessons a{display:flex;flex-direction:column;gap:8px;height:100%;background:var(--surface);border:1px solid var(--line);border-top:6px solid var(--c);border-radius:16px;padding:18px 20px;color:var(--ink);text-decoration:none;transition:transform .15s,box-shadow .15s}
+.lessons a:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(26,35,64,.10)}
+.lessons .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.lessons .num{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.lessons .prog{font-size:.8rem;font-weight:700;color:var(--ok)}
+.lessons .ws{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-block;font-family:var(--mono);font-weight:600;font-size:.8rem;padding:2px 8px;border-radius:6px;background:var(--cs);color:var(--c);white-space:nowrap}
+.lessons p{color:var(--muted);font-size:.95rem}
+footer{color:var(--muted);font-size:.9rem;display:flex;flex-direction:column;gap:6px}
+.about{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:clamp(18px,4vw,28px);display:flex;flex-direction:column;gap:14px}
+@media (prefers-reduced-motion: reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <header class="hero">
+    <span class="eyebrow">A free course in eight short lessons</span>
+    <h1>SQL Café</h1>
+    <p class="lead">Learn SQL the easy way, by ordering at a café. Every lesson explains each word and symbol in plain English, lets you watch your query work step by step, and ends with a quiz and a pocket card so it sticks.</p>
+    <div class="sqlline"><span class="k-sel">SELECT</span> item, price <span class="k-from">FROM</span> menu <span class="k-where">WHERE</span> price &lt; 4;</div>
+    <p>“Please show me the item and the price from the menu, but only where the price is less than 4.”</p>
+    <div class="row"><a class="btn" id="start" href="lesson-1.html">Start Lesson 1</a><a class="btn ghost" href="lesson-8.html">Jump to the final project</a></div>
+    <span class="welcome" id="welcome" hidden></span>
+  </header>
+
+  <section aria-labelledby="h-how">
+    <span class="eyebrow">How it works</span>
+    <h2 id="h-how">Read it, watch it, try it</h2>
+    <div class="how">
+      <div><b>A café story</b><span>Every idea starts as something you would say to a waiter, then becomes the same sentence in SQL.</span></div>
+      <div><b>A live playground</b><span>Type real SQL in your browser and watch the table act out each step. Nothing to install.</span></div>
+      <div><b>Missions and a quiz</b><span>Short missions, a five-question quiz and a pocket card help each lesson stick.</span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-lessons">
+    <span class="eyebrow">The lessons</span>
+    <h2 id="h-lessons">Eight lessons, from first query to your own tables</h2>
+    <ol class="lessons" id="lessons">
+      <li><a href="lesson-1.html" style="--c:var(--sel);--cs:var(--sel-soft)"><span class="top"><span class="num">Lesson 1</span><span class="prog" data-k="1" data-n="4"></span></span><h3>SQL is just ordering at a café</h3><span class="ws"><span class="chip">SELECT</span><span class="chip">FROM</span><span class="chip">WHERE</span></span><p>What do you want to see? Where is it? Which ones?</p></a></li>
+      <li><a href="lesson-2.html" style="--c:var(--ord);--cs:var(--ord-soft)"><span class="top"><span class="num">Lesson 2</span><span class="prog" data-k="2" data-n="4"></span></span><h3>Line them up, and bring me three</h3><span class="ws"><span class="chip">ORDER BY</span><span class="chip">ASC</span><span class="chip">DESC</span><span class="chip">LIMIT</span></span><p>Put answers in order and choose how many rows you get.</p></a></li>
+      <li><a href="lesson-3.html" style="--c:var(--agg);--cs:var(--agg-soft)"><span class="top"><span class="num">Lesson 3</span><span class="prog" data-k="3" data-n="4"></span></span><h3>The receipt words</h3><span class="ws"><span class="chip">COUNT</span><span class="chip">SUM</span><span class="chip">AVG</span><span class="chip">MIN</span><span class="chip">MAX</span></span><p>How many, the total, the average: many rows in, one row out.</p></a></li>
+      <li><a href="lesson-4.html" style="--c:var(--grp);--cs:var(--grp-soft)"><span class="top"><span class="num">Lesson 4</span><span class="prog" data-k="4" data-n="4"></span></span><h3>Make piles, then squash each pile</h3><span class="ws"><span class="chip">GROUP BY</span><span class="chip">HAVING</span></span><p>One answer for the drinks and another for the food.</p></a></li>
+      <li><a href="lesson-5.html" style="--c:var(--from);--cs:var(--from-soft)"><span class="top"><span class="num">Lesson 5</span><span class="prog" data-k="5" data-n="4"></span></span><h3>Look it up in another table</h3><span class="ws"><span class="chip">JOIN</span><span class="chip">ON</span><span class="chip">LEFT JOIN</span><span class="chip">IS NULL</span></span><p>Put the menu and the orders side by side.</p></a></li>
+      <li><a href="lesson-6.html" style="--c:var(--chg);--cs:var(--chg-soft)"><span class="top"><span class="num">Lesson 6</span><span class="prog" data-k="6" data-n="4"></span></span><h3>Change the menu board</h3><span class="ws"><span class="chip">INSERT</span><span class="chip">UPDATE</span><span class="chip">DELETE</span></span><p>Add, change and remove rows, safely.</p></a></li>
+      <li><a href="lesson-7.html" style="--c:var(--mk);--cs:var(--mk-soft)"><span class="top"><span class="num">Lesson 7</span><span class="prog" data-k="7" data-n="4"></span></span><h3>Build your own table</h3><span class="ws"><span class="chip">CREATE TABLE</span><span class="chip">PRIMARY KEY</span><span class="chip">NOT NULL</span></span><p>Every column: name, kind, rules.</p></a></li>
+      <li class="final"><a href="lesson-8.html" style="--c:var(--ok);--cs:var(--ok-soft)"><span class="top"><span class="num">Lesson 8 · Final project</span><span class="prog" data-k="8" data-n="10"></span></span><h3>Your first day running the café's data</h3><span class="ws"><span class="chip">Ten jobs</span><span class="chip">Review quiz</span><span class="chip">Certificate</span></span><p>Use everything you have learned on ten real café jobs, then unlock your certificate.</p></a></li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="h-about">
+    <span class="eyebrow">About</span>
+    <h2 id="h-about">Made by MASSH AI</h2>
+    <div class="about">
+      <p>SQL Café is a free course from <a href="https://masshai.com">MASSH AI Services</a> in London, which offers data services, digital builds and startup support for individuals and businesses. We made it because SQL is one of the most useful skills in any job that touches data, and it deserves to be explained simply.</p>
+      <p><b>Want SQL or data training for your team, or help with your own data?</b> We would love to hear from you.</p>
+      <div class="row"><a class="btn" href="https://masshai.com/#contact">Get in touch</a><a class="btn ghost" href="https://masshai.com">Visit masshai.com</a></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Your progress is saved in this browser only. Nothing is sent anywhere.</span>
+    <span>SQL Café · A free course by <a href="https://masshai.com">MASSH AI</a>.</span>
+  </footer>
+</main>
+<script>
+(function(){
+  let started=false, firstOpen=null;
+  document.querySelectorAll('.prog').forEach(el=>{
+    const k=el.dataset.k, n=+el.dataset.n; let done=0;
+    try{ done=JSON.parse(localStorage.getItem('sqlcafe'+k+'-won')||'[]').length; }catch(e){}
+    if(done){ started=true; el.textContent=done>=n?'✓ All done':done+' of '+n+' done'; }
+    if(done<n && firstOpen===null) firstOpen=k;
+  });
+  if(started){
+    let nm=''; try{ nm=localStorage.getItem('sqlcafe-name')||''; }catch(e){}
+    const w=document.getElementById('welcome'); w.hidden=false;
+    w.textContent='Welcome back'+(nm?', '+nm:'')+'! Your progress is shown on each lesson below.';
+    if(firstOpen){ const s=document.getElementById('start'); s.href='lesson-'+firstOpen+'.html'; s.textContent='Continue with Lesson '+firstOpen; }
+  }
+})();
+</script>
+</body>
+</html>

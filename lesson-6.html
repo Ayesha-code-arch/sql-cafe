@@ -1,0 +1,1328 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="SQL Cafe Lesson 6: INSERT, UPDATE and DELETE, with live tables you can change.">
+<link rel="canonical" href="https://learn.masshai.com/lesson-6.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%234263EB%27/%3E%3Cpath d=%27M16 24h26v14a10 10 0 0 1-10 10h-6a10 10 0 0 1-10-10z%27 fill=%27white%27/%3E%3Cpath d=%27M42 28h4a5 5 0 0 1 0 10h-4%27 stroke=%27white%27 stroke-width=%274%27 fill=%27none%27/%3E%3C/svg%3E">
+<style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}.topnav{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:.9rem;font-weight:700;margin-bottom:-40px}.topnav a{color:var(--sel);text-decoration:none}.topnav a:hover{text-decoration:underline}.topnav .mid{color:var(--muted)}.madeby{margin-top:-40px;padding-top:18px;border-top:1px dashed var(--line);color:var(--muted);font-size:.9rem;max-width:none}.madeby a{color:var(--sel)}</style>
+<title>SQL Café Lesson 6</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: same reading column as Lessons 1 to 5. Today's three words change data, so they share one warning colour, red. Rows that change are tinted like traffic lights: green added, amber changed, red removed. */
+:root{
+  --bg:#F3F6FC; --surface:#FFFFFF; --ink:#1A2340; --muted:#56617F; --line:#DCE3F0; --band:#E6ECFA;
+  --sel:#4263EB; --sel-soft:#E5EAFF;
+  --from:#E07A00; --from-soft:#FFF0DC;
+  --where:#D6336C; --where-soft:#FFE3EC;
+  --ord:#0C8599; --ord-soft:#DDF6FA;
+  --lim:#5C940D; --lim-soft:#EBF7D6;
+  --agg:#A16207; --agg-soft:#FEF3C7;
+  --grp:#9C36B5; --grp-soft:#F8E8FC;
+  --sym:#7048E8; --sym-soft:#EFE9FF;
+  --chg:#E03131; --chg-soft:#FFE8E8;
+  --ok:#0B8A64; --ok-soft:#DCF5EC; --bad:#C92A2A; --bad-soft:#FFE3E3;
+  --paper:#FFFDF7;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10142A; --surface:#181E3A; --ink:#E8ECFA; --muted:#A0A9C9; --line:#2A3358; --band:#1C2448;
+  --sel:#8DA2FF; --sel-soft:#232E63; --from:#FFB04D; --from-soft:#3D2A10;
+  --where:#FF7BA6; --where-soft:#45182B; --ord:#3BC9DB; --ord-soft:#0F3A42; --lim:#A9E34B; --lim-soft:#2A3A12;
+  --agg:#FCC419; --agg-soft:#3B3010; --grp:#E599F7; --grp-soft:#3A1F45; --sym:#B39CFF; --sym-soft:#2D2360;
+  --chg:#FF8787; --chg-soft:#46191C;
+  --ok:#4FD6A5; --ok-soft:#123A30; --bad:#FF8787; --bad-soft:#451C1C; --paper:#1F2547;
+  color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#10142A; --surface:#181E3A; --ink:#E8ECFA; --muted:#A0A9C9; --line:#2A3358; --band:#1C2448;
+  --sel:#8DA2FF; --sel-soft:#232E63; --from:#FFB04D; --from-soft:#3D2A10;
+  --where:#FF7BA6; --where-soft:#45182B; --ord:#3BC9DB; --ord-soft:#0F3A42; --lim:#A9E34B; --lim-soft:#2A3A12;
+  --agg:#FCC419; --agg-soft:#3B3010; --grp:#E599F7; --grp-soft:#3A1F45; --sym:#B39CFF; --sym-soft:#2D2360;
+  --chg:#FF8787; --chg-soft:#46191C;
+  --ok:#4FD6A5; --ok-soft:#123A30; --bad:#FF8787; --bad-soft:#451C1C; --paper:#1F2547;
+  color-scheme:dark }
+
+*{box-sizing:border-box;font-variant-ligatures:none}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:40px 80px;display:flex;flex-direction:column;gap:72px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:clamp(2.2rem,6vw,3.6rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(1.6rem,4vw,2.2rem);font-weight:800}
+h3{font-size:1.25rem;font-weight:600}
+p{margin:0;max-width:65ch}
+a{color:var(--sel)}
+.eyebrow{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:20px}
+code,.mono{font-family:var(--mono)}
+.k-sel{color:var(--sel);font-weight:700}
+.k-from{color:var(--from);font-weight:700}
+.k-where{color:var(--where);font-weight:700}
+.k-ord{color:var(--ord);font-weight:700}
+.k-lim{color:var(--lim);font-weight:700}
+.k-agg{color:var(--agg);font-weight:700}
+.k-grp{color:var(--grp);font-weight:700}
+.k-sym{color:var(--sym);font-weight:700}
+.k-chg{color:var(--chg);font-weight:700}
+.chip{display:inline-block;font-family:var(--mono);font-weight:600;font-size:.82rem;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.chip.sel{background:var(--sel-soft);color:var(--sel)}
+.chip.from{background:var(--from-soft);color:var(--from)}
+.chip.where{background:var(--where-soft);color:var(--where)}
+.chip.ord{background:var(--ord-soft);color:var(--ord)}
+.chip.lim{background:var(--lim-soft);color:var(--lim)}
+.chip.agg{background:var(--agg-soft);color:var(--agg)}
+.chip.grp{background:var(--grp-soft);color:var(--grp)}
+.chip.sym{background:var(--sym-soft);color:var(--sym)}
+.chip.chg{background:var(--chg-soft);color:var(--chg)}
+
+/* hero */
+.hero{display:flex;flex-direction:column;gap:22px;background:var(--band);border-radius:24px;padding:clamp(20px,4vw,40px)}
+.recap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.92rem;color:var(--muted)}
+.order{display:flex;flex-direction:column;gap:14px;margin-top:6px}
+.bubble{background:var(--surface);border:1px solid var(--line);border-radius:18px 18px 18px 4px;padding:18px 22px;font-size:clamp(1.1rem,2.6vw,1.4rem);max-width:720px;line-height:1.7}
+.bubble small{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.u{border-bottom:3px solid;padding-bottom:1px}
+.u.chg{border-color:var(--chg)} .u.from{border-color:var(--from)} .u.sym{border-color:var(--sym)}
+.arrow{font-family:var(--mono);color:var(--muted);padding-left:22px}
+.sqlline{font-family:var(--mono);font-size:clamp(.95rem,2.3vw,1.2rem);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 22px;max-width:720px;line-height:1.7}
+
+/* three cards */
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:820px){.three{grid-template-columns:1fr}}
+.q{background:var(--cs);border:2px solid var(--c);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.q .ic{font-family:var(--display);font-weight:800;font-size:2rem;line-height:1;color:var(--c)}
+.q .kw{font-family:var(--mono);font-weight:600;font-size:1.35rem;color:var(--chg)}
+.q .ask{font-family:var(--display);font-weight:800;font-size:1.2rem;line-height:1.2}
+.q p{color:var(--muted);font-size:.93rem}
+.q code.ex{background:var(--surface);padding:8px 10px;border-radius:8px;font-size:.84rem;overflow-wrap:anywhere;line-height:1.5}
+.fact{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+.fact b{font-family:var(--display)}
+
+/* pairing picture */
+.pairs{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;overflow-x:auto}
+.pairs table{border-collapse:separate;border-spacing:8px 6px;font-family:var(--mono);font-size:.95rem;margin:0 auto}
+.pairs td{padding:8px 12px;border-radius:8px;text-align:center;white-space:nowrap}
+.pairs tr.c td{background:var(--band)}
+.pairs tr.v td{background:var(--ok-soft);color:var(--ok);font-weight:600}
+.pairs tr.a td{color:var(--muted);padding:0;font-family:var(--display);font-weight:800}
+.pairs td.lbl{background:none !important;color:var(--muted);font-family:var(--body);font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;text-align:right}
+
+/* before / after */
+.ba{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px}
+@media (max-width:700px){.ba{grid-template-columns:1fr}.ba .big-arrow{transform:rotate(90deg);justify-self:center}}
+.ba .tbox{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.ba .cap{font-size:.85rem;color:var(--muted);margin-bottom:6px;display:block}
+.big-arrow{font-family:var(--display);font-weight:800;font-size:2rem;color:var(--chg)}
+
+/* danger */
+.danger{background:var(--chg-soft);border:2px solid var(--chg);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:14px}
+.danger .big{font-family:var(--display);font-weight:800;font-size:clamp(1.3rem,3.4vw,1.7rem);line-height:1.2;color:var(--chg)}
+.steps2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:700px){.steps2{grid-template-columns:1fr}}
+.steps2 div{background:var(--surface);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.steps2 code{font-size:.88rem;overflow-wrap:anywhere}
+.steps2 .n{font-weight:700;font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+
+.patterns{background:var(--surface);border:2px solid var(--ink);border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:12px}
+.patterns .pt{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 18px;align-items:baseline;padding:10px 0;border-bottom:1px dashed var(--line)}
+.patterns .pt:last-of-type{border-bottom:none}
+@media (max-width:700px){.patterns .pt{grid-template-columns:1fr}}
+.patterns code{font-size:.95rem;overflow-wrap:anywhere}
+.patterns .rhyme{font-family:var(--display);font-weight:800;font-size:clamp(1.1rem,3vw,1.35rem);line-height:1.3}
+
+/* reader */
+.reader{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:clamp(18px,3vw,28px);display:flex;flex-direction:column;gap:18px}
+.bigq{font-family:var(--mono);font-size:clamp(1.05rem,3.2vw,1.6rem);display:flex;flex-wrap:wrap;gap:6px 2px;align-items:baseline;line-height:1.5}
+.tok{padding:2px 5px;border-radius:8px;cursor:pointer;border:2px solid transparent;background:none;font:inherit;color:inherit;opacity:.3;transition:opacity .25s,background .25s,border-color .25s}
+.tok.join{margin-left:-11px}
+.tok.seen{opacity:1}
+.tok.on{opacity:1;border-color:currentColor;background:var(--ts)}
+.tok.t-chg{color:var(--chg);--ts:var(--chg-soft);font-weight:600}
+.tok.t-where{color:var(--where);--ts:var(--where-soft);font-weight:600}
+.tok.t-sym{color:var(--sym);--ts:var(--sym-soft);font-weight:600}
+.tok.t-name{color:var(--ink);--ts:var(--band)}
+.explain{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:700px){.explain{grid-template-columns:1fr}}
+.ebox{background:var(--bg);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.ebox .big{font-family:var(--mono);font-size:1.5rem;font-weight:600;overflow-wrap:anywhere}
+.ebox .kind{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:var(--muted)}
+.ebox .tip{font-size:.92rem;color:var(--muted)}
+.sayit{font-size:clamp(1.05rem,2.6vw,1.3rem);font-weight:700;line-height:1.4}
+.sayit .new{background:var(--sym-soft);color:var(--sym);border-radius:6px;padding:0 4px}
+.reader .nav{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.progress{font-size:.85rem;color:var(--muted);margin-left:auto}
+
+/* symbol table */
+.symwrap{overflow-x:auto;border-radius:16px;border:1px solid var(--line);background:var(--surface)}
+table.sym{border-collapse:collapse;width:100%;min-width:620px}
+.sym th,.sym td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;font-size:.95rem}
+.sym th{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);background:var(--band)}
+.sym td:first-child{font-family:var(--mono);font-weight:700;font-size:1.15rem;white-space:nowrap}
+.sym td.say{font-weight:700;min-width:150px}
+.sym td code{font-size:.88rem;background:var(--bg);padding:2px 6px;border-radius:6px;white-space:nowrap}
+.sym tr.grp td{background:var(--bg);font-family:var(--body);font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;padding:8px 14px}
+@media (max-width:640px){
+  .symwrap table.sym{min-width:0}
+  .sym thead{display:none}
+  table.sym,.sym tbody{display:block}
+  .sym tr{display:flex;flex-wrap:wrap;gap:6px 14px;padding:14px 16px;border-bottom:1px solid var(--line);align-items:baseline}
+  .sym td{display:block;border:none !important;padding:0 !important;min-width:0 !important}
+  .sym td:nth-child(3),.sym td:nth-child(4){flex:1 1 100%}
+  .sym td code{white-space:normal}
+  .sym tr.grp{display:block;padding:0;border-bottom:1px solid var(--line)}
+  .sym tr.grp td{display:block;padding:8px 16px !important}
+}
+.tipbox{background:var(--sym-soft);color:var(--ink);border-radius:14px;padding:14px 18px;font-size:.95rem}
+
+/* playground */
+.play{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px;align-items:start}
+@media (max-width:860px){.play{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.mission{background:var(--bg);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.mission-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.dots{display:flex;gap:6px}
+.dots button{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);background:var(--surface);color:var(--muted);font:700 .75rem var(--body);cursor:pointer;padding:0}
+.dots button.cur{border-color:var(--ink);color:var(--ink)}
+.dots button.won{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.mission h3{font-size:1.1rem}
+.linkbtn{background:none;border:none;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:.88rem}
+.hint{font-size:.9rem;color:var(--muted)}
+textarea{width:100%;min-height:130px;resize:vertical;font-family:var(--mono);font-size:15px;line-height:1.5;padding:12px 14px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
+textarea:focus{outline:none;border-color:var(--sel)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font:700 1rem var(--body);padding:10px 20px;border-radius:10px;border:none;background:var(--ink);color:var(--bg);cursor:pointer}
+.btn:hover{opacity:.88}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.btn.danger{background:var(--chg);color:var(--surface)}
+.btn.small{font-size:.85rem;padding:6px 12px}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
+.kbd{font-size:.8rem;color:var(--muted)}
+.examples{display:flex;flex-wrap:wrap;gap:6px}
+.examples button{font-family:var(--mono);font-size:.78rem;padding:5px 9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;text-align:left}
+.examples button:hover{border-color:var(--ink)}
+.english{font-size:1rem;background:var(--bg);border-radius:10px;padding:10px 14px}
+.english .lbl{display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.msg{border-radius:10px;padding:10px 14px;font-weight:700;font-size:.95rem;display:flex;flex-direction:column;gap:10px}
+.msg.err{background:var(--bad-soft);color:var(--bad)}
+.msg.win{background:var(--ok-soft);color:var(--ok)}
+.msg.near{background:var(--from-soft);color:var(--from)}
+.msg.done{background:var(--band);color:var(--ink)}
+.msg.warn{background:var(--chg-soft);color:var(--chg);border:2px solid var(--chg)}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.steps li{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:start;padding:6px 12px;border-radius:10px;border:2px solid transparent;background:var(--bg);opacity:.5;transition:opacity .3s,border-color .3s}
+.steps li .n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.75rem;background:var(--line);color:var(--ink)}
+.steps li.active{opacity:1;border-color:var(--c)}
+.steps li.done{opacity:1}
+.steps li.done .n{background:var(--c);color:var(--surface)}
+.steps li .t{font-size:.88rem}
+.tablewrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line);transition:box-shadow .4s,border-color .4s}
+.tablewrap.lit{border-color:var(--from);box-shadow:0 0 0 4px var(--from-soft)}
+.stagepair{display:flex;flex-wrap:wrap;gap:10px;padding:10px}
+.tcard{flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:6px}
+.tcard .tname{font-family:var(--mono);font-weight:600;color:var(--from)}
+.tcard .tbox{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.joinedlbl{font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--from);padding:4px 10px 0}
+.joinedbox{overflow-x:auto;padding:0 10px 10px}
+table.data{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums}
+.data tr{position:relative;transition:opacity .5s}
+.data th,.data td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;transition:opacity .4s,background .25s,color .3s;background:var(--surface)}
+.data th{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.data td.num{text-align:right}
+.data td.null{color:var(--muted);font-style:italic}
+.data td.mark,.data th.mark{width:34px;text-align:center;padding:7px 4px;font-weight:700}
+.data .oncol{color:var(--from);font-weight:600}
+.data tr.look td{background:var(--from-soft)}
+.data tr.match td{background:var(--from-soft)}
+.data tr.nomatch td{opacity:.35}
+.data tr.nomatch td.mark{color:var(--bad);opacity:1}
+.data tr.checking td{background:var(--where-soft)}
+.data tr.keep td.mark{color:var(--ok)}
+.data tr.drop td{opacity:.28;text-decoration:line-through}
+.data tr.drop td.mark{color:var(--bad);opacity:1;text-decoration:none}
+.data tr.skip td.mark{color:var(--muted)}
+.data .col-drop{opacity:.18}
+.data th.col-keep{background:var(--sel-soft);color:var(--sel)}
+.data .grpcol{color:var(--grp);font-weight:600;opacity:1 !important}
+.data tr.pile0 td{background:var(--grp-soft)}
+.data tr.pilestart td{border-top:3px solid var(--grp)}
+.data tr.pile0 td.mark,.data tr.pile1 td.mark{color:var(--grp)}
+.data tr.counting td{background:var(--agg-soft) !important}
+.data tr.squashed{opacity:.15}
+.data .sortcol{background:var(--ord-soft) !important;color:var(--ord);opacity:1 !important}
+.data td.rank{color:var(--ord)}
+.data tr.cut td{opacity:.25;text-decoration:line-through}
+.data tr.cut td.mark{color:var(--bad);opacity:1;text-decoration:none}
+.data tr.kept td.mark{color:var(--lim)}
+.data tr.added td{background:var(--ok-soft)}
+.data tr.added td.mark{color:var(--ok)}
+.data td.changed{background:var(--agg-soft) !important;color:var(--agg);font-weight:600}
+.data td.changed s{opacity:.6;font-weight:400}
+.data tr.removing td{background:var(--chg-soft);text-decoration:line-through}
+.data tr.removing td.mark{color:var(--chg);text-decoration:none}
+.data.result th{background:var(--sel-soft);color:var(--sel)}
+.data.result th.agg{background:var(--agg-soft);color:var(--agg)}
+.data.result th.gk{background:var(--grp-soft);color:var(--grp)}
+.data.result tr,.data tr.pop{animation:pop .35s ease both}
+@keyframes pop{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.till{font-family:var(--mono);font-size:.86rem;background:var(--paper);border:2px dashed var(--agg);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:4px;font-variant-numeric:tabular-nums}
+.till .lbl{font-family:var(--body);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--agg)}
+.till .ln{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.till .ln .pl{color:var(--grp);font-weight:600}
+.till .ln b{color:var(--agg)}
+.count{font-weight:700;font-size:.95rem}
+.order-note{font-size:.85rem;color:var(--muted)}
+.live{display:flex;flex-direction:column;gap:10px;border-top:1px dashed var(--line);padding-top:12px}
+.live-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* quiz */
+.quiz{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.quiz{grid-template-columns:1fr}}
+.qz{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.qz:last-child:nth-child(odd){grid-column:1/-1}
+.qz .prompt{font-weight:700}
+.qz .opts{display:flex;flex-direction:column;gap:8px}
+.qz .opts button{text-align:left;font:inherit;font-size:.95rem;padding:10px 14px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.qz .opts button.mono{font-family:var(--mono);font-size:.82rem}
+.qz .opts button:hover:not(:disabled){border-color:var(--ink)}
+.qz .opts button.right{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.qz .opts button.wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.qz .why{font-size:.92rem;color:var(--muted)}
+.score{font-family:var(--display);font-weight:800;font-size:1.2rem}
+
+/* pocket */
+.pocket{background:var(--surface);border:2px solid var(--ink);border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:14px;max-width:700px}
+.pocket .line{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;align-items:baseline;font-size:1.05rem}
+.pocket .line code{font-weight:600;font-size:1.05rem}
+.pocket hr{border:none;border-top:1px dashed var(--line);margin:0;width:100%}
+.pocket ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+footer{color:var(--muted);font-size:.9rem}
+@media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+</style>
+
+</head>
+<body>
+<main class="wrap">
+  <nav class="topnav" aria-label="Lessons"><a href="lesson-5.html">&larr; Lesson 5</a><a class="mid" href="index.html">All lessons</a><a href="lesson-7.html">Lesson 7 &rarr;</a></nav>
+
+
+  <header class="hero">
+    <span class="eyebrow">SQL Café · Lesson 6 of 8</span>
+    <h1>Please change the menu board.</h1>
+    <div class="recap">So far: <span class="chip sel">SELECT</span><span class="chip from">FROM … JOIN … ON</span><span class="chip where">WHERE</span><span class="chip grp">GROUP BY</span><span class="chip grp">HAVING</span><span class="chip ord">ORDER BY</span><span class="chip lim">LIMIT</span><span class="chip agg">COUNT SUM AVG MIN MAX</span> <a href="lesson-1.html">Lesson 1</a> · <a href="lesson-2.html">Lesson 2</a> · <a href="lesson-3.html">Lesson 3</a> · <a href="lesson-4.html">Lesson 4</a> · <a href="lesson-5.html">Lesson 5</a></div>
+    <p>Everything so far has only <b>read</b> the tables. SELECT never changes anything. Today you learn the three words that <b>change</b> data: one to add a row, one to change rows, and one to remove rows.</p>
+    <div class="order">
+      <div class="bubble"><small>You say to the café manager</small>
+        “Please <span class="u chg">add</span> a new item <span class="u from">to the menu</span>: <span class="u sym">a Lemon Tart, number 9, food, £3.20, 300 calories</span>. Thank you!”
+      </div>
+      <div class="arrow">↓ same thing in SQL</div>
+      <div class="sqlline"><span class="k-chg">INSERT INTO</span> menu (id, item, type, price, calories) <span class="k-chg">VALUES</span> (9, 'Lemon Tart', 'food', 3.2, 300);</div>
+    </div>
+  </header>
+
+  <section aria-labelledby="h-three">
+    <span class="eyebrow">The one thing to remember</span>
+    <h2 id="h-three">Add, change, remove</h2>
+    <p>Think of the café's menu board. You can pin up a new card, rub out and rewrite a card, or take a card down. SQL has one word for each.</p>
+    <div class="three">
+      <div class="q" style="--c:var(--ok);--cs:var(--ok-soft)">
+        <span class="ic" aria-hidden="true">+</span>
+        <span class="kw">INSERT</span>
+        <span class="ask">Add a new row</span>
+        <code class="ex">INSERT INTO menu (…) VALUES (…)</code>
+        <p>Pin up a new card. The new row appears in green in the playground.</p>
+      </div>
+      <div class="q" style="--c:var(--agg);--cs:var(--agg-soft)">
+        <span class="ic" aria-hidden="true">✎</span>
+        <span class="kw">UPDATE</span>
+        <span class="ask">Change rows</span>
+        <code class="ex">UPDATE menu SET … WHERE …</code>
+        <p>Rub out and rewrite. Changed cells appear in amber.</p>
+      </div>
+      <div class="q" style="--c:var(--chg);--cs:var(--chg-soft)">
+        <span class="ic" aria-hidden="true">−</span>
+        <span class="kw">DELETE</span>
+        <span class="ask">Remove rows</span>
+        <code class="ex">DELETE FROM menu WHERE …</code>
+        <p>Take the card down. Removed rows are crossed out in red.</p>
+      </div>
+    </div>
+    <div class="fact"><div><b>Green, amber, red, like traffic lights.</b> Adding is safe, changing needs care, removing needs the most care.</div></div>
+  </section>
+
+  <section aria-labelledby="h-insert">
+    <span class="eyebrow">INSERT</span>
+    <h2 id="h-insert">Two lists that pair up</h2>
+    <p>INSERT INTO takes two lists in brackets: first the column names, then after VALUES the new values. They pair up in order: first with first, second with second. So both lists must be the same length.</p>
+    <div class="pairs">
+      <table aria-label="Columns paired with values">
+        <tr class="c"><td class="lbl">Columns</td><td>id</td><td>item</td><td>type</td><td>price</td><td>calories</td></tr>
+        <tr class="a"><td></td><td>↓</td><td>↓</td><td>↓</td><td>↓</td><td>↓</td></tr>
+        <tr class="v"><td class="lbl">Values</td><td>9</td><td>'Lemon Tart'</td><td>'food'</td><td>3.2</td><td>300</td></tr>
+      </table>
+    </div>
+    <div class="fact">
+      <div><b>Same rules as before:</b> text goes in 'quotes', numbers don't. Prices are written without the £ sign: £3.20 is just <code>3.2</code>.</div>
+      <div><b>Every row needs its own id.</b> The database refuses two rows with the same id, because the id is how other tables (like orders) point at a row.</div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-update">
+    <span class="eyebrow">UPDATE</span>
+    <h2 id="h-update">SET means “change it to”</h2>
+    <p>UPDATE names the table, SET says which column gets which new value, and WHERE says which rows to change.</p>
+    <div class="ba">
+      <div><span class="cap">Before</span><div class="tbox"><table class="data"><tr><th>item</th><th>price</th></tr><tr><td>Espresso</td><td class="num">£2.50</td></tr><tr><td>Cappuccino</td><td class="num">£3.50</td></tr><tr><td>Iced Latte</td><td class="num">£4.50</td></tr></table></div></div>
+      <div class="big-arrow" aria-hidden="true">→</div>
+      <div><span class="cap"><code>UPDATE menu SET price = 3.8 WHERE item = 'Cappuccino'</code></span><div class="tbox"><table class="data"><tr><th>item</th><th>price</th></tr><tr><td>Espresso</td><td class="num">£2.50</td></tr><tr><td>Cappuccino</td><td class="num changed"><s>£3.50</s> £3.80</td></tr><tr><td>Iced Latte</td><td class="num">£4.50</td></tr></table></div></div>
+    </div>
+    <div class="fact">
+      <div><b>One symbol, two jobs.</b> In SET, <code>=</code> means “change it to”. In WHERE, <code>=</code> means “is”, a test. Same symbol, different job, depending on where it is.</div>
+      <div><b>You can use the old value.</b> <code>SET price = price + 0.2</code> means “make the price 20p more”. The right side uses the price as it was before the change.</div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-danger">
+    <span class="eyebrow">The golden safety rule</span>
+    <h2 id="h-danger">No WHERE means every row</h2>
+    <div class="danger">
+      <span class="big">UPDATE and DELETE without WHERE change or remove every single row in the table.</span>
+      <p><code>UPDATE menu SET price = 1</code> makes everything on the menu cost £1.00. <code>DELETE FROM orders</code> throws away every order. In a real database there is usually no Undo button, so this is the most important habit in this lesson.</p>
+      <div class="steps2">
+        <div><span class="n">Step 1: look first</span><code><span class="k-sel">SELECT *</span> FROM menu WHERE item = 'Fruit Cup';</code><span>Check that only the rows you mean come back.</span></div>
+        <div><span class="n">Step 2: then change</span><code><span class="k-chg">DELETE</span> FROM menu WHERE item = 'Fruit Cup';</code><span>Swap <code>SELECT *</code> for <code>DELETE</code>, and keep the same WHERE.</span></div>
+      </div>
+      <p><b>Look before you change:</b> the same WHERE that found the rows in step 1 is the one that changes them in step 2. The playground asks you to confirm whenever you leave out WHERE.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-fk">
+    <span class="eyebrow">The database looks after you</span>
+    <h2 id="h-fk">It protects the links between tables</h2>
+    <p>Orders point at menu items by their number. So the database stops you from breaking those links:</p>
+    <div class="fact">
+      <div><b>You can't delete a menu item that has orders.</b> Cappuccino (id 2) has two orders. If it disappeared, those orders would point at nothing. So <code>DELETE FROM menu WHERE id = 2</code> is refused.</div>
+      <div><b>You can't add an order for an item that doesn't exist.</b> There is no menu item 12, so an order with <code>item_id</code> 12 is refused.</div>
+      <div>This protection is called a <b>foreign key</b>. Our café's database has one on <code>orders.item_id</code>, pointing at <code>menu.id</code>.</div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-pat">
+    <span class="eyebrow">Three patterns to learn by heart</span>
+    <h2 id="h-pat">Add with VALUES, change with SET, remove with FROM</h2>
+    <div class="patterns">
+      <div class="pt"><code><span class="k-chg">INSERT INTO</span> menu (…) <span class="k-chg">VALUES</span> (…);</code><span>“Please add into the menu… these values.”</span></div>
+      <div class="pt"><code><span class="k-chg">UPDATE</span> menu <span class="k-chg">SET</span> … <span class="k-where">WHERE</span> …;</code><span>“Please change the menu: set… but only where…”</span></div>
+      <div class="pt"><code><span class="k-chg">DELETE FROM</span> menu <span class="k-where">WHERE</span> …;</code><span>“Please remove from the menu, but only where…”</span></div>
+      <span class="rhyme">Add with VALUES. Change with SET. Remove with FROM. And always, always WHERE.</span>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-read">
+    <span class="eyebrow">Read the code one word at a time</span>
+    <h2 id="h-read">Every piece has a meaning, even the two = signs</h2>
+    <p>Please press <b>Next</b> (or click any piece) and watch the sentence grow underneath.</p>
+    <div class="reader">
+      <div class="bigq" id="bigq" role="group" aria-label="The query, one piece at a time"></div>
+      <div class="explain">
+        <div class="ebox">
+          <span class="kind" id="r-kind"></span>
+          <span class="big" id="r-big"></span>
+          <span id="r-what"></span>
+          <span class="tip" id="r-tip"></span>
+        </div>
+        <div class="ebox">
+          <span class="kind">Say it out loud</span>
+          <span class="sayit" id="r-say" aria-live="polite"></span>
+        </div>
+      </div>
+      <div class="nav">
+        <button class="btn ghost" id="r-back" type="button">◀ Back</button>
+        <button class="btn" id="r-next" type="button">Next ▶</button>
+        <span class="progress" id="r-prog"></span>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-sym">
+    <span class="eyebrow">Today's words and symbols</span>
+    <h2 id="h-sym">Say each one out loud</h2>
+    <p>Swap each word for what you say, and the code becomes a normal sentence again.</p>
+    <div class="symwrap">
+      <table class="sym">
+        <thead><tr><th>Write</th><th>Say it as</th><th>Example</th><th>Why it's there</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="4">Adding</td></tr>
+          <tr><td class="k-chg">INSERT INTO</td><td class="say">“please add into…”</td><td><code>INSERT INTO menu (id, item)</code></td><td>Names the table and, in brackets, the columns you will fill.</td></tr>
+          <tr><td class="k-chg">VALUES</td><td class="say">“these values…”</td><td><code>VALUES (9, 'Lemon Tart')</code></td><td>The new row, in the same order as the columns.</td></tr>
+          <tr class="grp"><td colspan="4">Changing</td></tr>
+          <tr><td class="k-chg">UPDATE</td><td class="say">“please change…”</td><td><code>UPDATE menu</code></td><td>Names the table to change.</td></tr>
+          <tr><td class="k-chg">SET</td><td class="say">“set … to …”</td><td><code>SET price = 3.8</code></td><td>Says the new value. Change several columns at once with commas: <code>SET price = 3.8, calories = 130</code>.</td></tr>
+          <tr class="grp"><td colspan="4">Removing</td></tr>
+          <tr><td class="k-chg">DELETE FROM</td><td class="say">“please remove from…”</td><td><code>DELETE FROM menu</code></td><td>Removes whole rows, so there is no column list and no star.</td></tr>
+          <tr class="grp"><td colspan="4">Choosing rows</td></tr>
+          <tr><td class="k-where">WHERE</td><td class="say">“but only where…”</td><td><code>WHERE item = 'Bagel'</code></td><td>The same WHERE as Lesson 1. With UPDATE and DELETE it is your safety belt.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tipbox"><b>Can I leave out the column list?</b> Yes, if you give a value for every column in the table's own order: <code>INSERT INTO menu VALUES (9, 'Lemon Tart', 'food', 3.2, 300)</code>. Naming the columns is safer, though, because you can see exactly which value goes where.</div>
+  </section>
+
+  <section aria-labelledby="h-play">
+    <span class="eyebrow">Your turn</span>
+    <h2 id="h-play">Playground: change the café's tables</h2>
+    <p>Please type a statement and press <b>Run</b>. INSERT, UPDATE and DELETE really change the tables below, and SELECT reads them. Don't worry about mistakes: <b>Reset tables</b> puts everything back.</p>
+    <div class="play">
+      <div class="panel">
+        <div class="mission">
+          <div class="mission-top"><span class="eyebrow">Mission</span><div class="dots" id="dots"></div></div>
+          <h3 id="m-title"></h3>
+          <div class="row"><button class="linkbtn" id="m-hint-btn" type="button">Show a hint</button><button class="linkbtn" id="m-ans-btn" type="button">Show the answer</button></div>
+          <p class="hint" id="m-hint" hidden></p>
+        </div>
+        <label for="sql" class="eyebrow">Your statement</label>
+        <textarea id="sql" spellcheck="false" autocapitalize="off" autocomplete="off">INSERT INTO menu (id, item, type, price, calories) VALUES (9, 'Lemon Tart', 'food', 3.2, 300);</textarea>
+        <div class="row"><button class="btn" id="run" type="button">▶ Run</button><button class="btn ghost" id="replay" type="button">Replay slowly</button><span class="kbd">Ctrl + Enter also runs</span></div>
+        <div class="english" id="english" aria-live="polite"></div>
+        <div id="msg" aria-live="polite"></div>
+        <div>
+          <span class="eyebrow">Or try one of these</span>
+          <div class="examples" id="examples" style="margin-top:8px"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <ol class="steps" id="steps"></ol>
+        <div class="till" id="till" hidden><span class="lbl">The till, pile by pile</span><div id="till-lines"></div></div>
+        <div class="tablewrap" id="tw"><div id="stage"></div></div>
+        <div class="count" id="count"></div>
+        <div class="live">
+          <div class="live-top"><span class="eyebrow">The tables right now</span><button class="btn ghost small" id="reset" type="button">↺ Reset tables</button></div>
+          <div class="stagepair" id="live" style="padding:0"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-quiz">
+    <span class="eyebrow">Lock it in</span>
+    <h2 id="h-quiz">Five quick questions</h2>
+    <p>Answering from memory is the fastest way to make something stick. Wrong answers explain themselves, so please don't worry.</p>
+    <div class="quiz" id="quiz"></div>
+    <div class="score" id="score" aria-live="polite"></div>
+  </section>
+
+  <section aria-labelledby="h-card">
+    <span class="eyebrow">Take this with you</span>
+    <h2 id="h-card">Your pocket card</h2>
+    <p>Please take a screenshot of this card. Read it once tomorrow and once next week.</p>
+    <div class="pocket">
+      <div class="line"><code class="k-chg">INSERT</code><span><code>INSERT INTO menu (…) VALUES (…)</code> adds a row.</span></div>
+      <div class="line"><code class="k-chg">UPDATE</code><span><code>UPDATE menu SET … WHERE …</code> changes rows.</span></div>
+      <div class="line"><code class="k-chg">DELETE</code><span><code>DELETE FROM menu WHERE …</code> removes rows.</span></div>
+      <hr>
+      <ul>
+        <li>Add with VALUES. Change with SET. Remove with FROM. And always, always WHERE.</li>
+        <li>No WHERE means every row, and there is usually no Undo.</li>
+        <li>Look first: run SELECT * with the same WHERE, then swap in UPDATE or DELETE.</li>
+        <li>The column list and the VALUES list pair up in order.</li>
+        <li>In SET, = means “change it to”. In WHERE, = means “is”.</li>
+        <li>Every row needs its own id. Links between tables are protected (foreign keys).</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Next lesson: <a href="lesson-7.html"><b>Lesson 7: CREATE TABLE</b></a>, or how to make a brand new table of your own and choose what kind of data each column holds.</footer>
+  <p class="madeby">SQL Caf&eacute; is a free course by <a href="https://masshai.com">MASSH AI</a>. Want SQL or data training for your team? <a href="https://masshai.com/#contact">Please get in touch</a>.</p>
+</main>
+
+<script>
+(function(){
+const ORIG={
+  menu:{cols:['id','item','type','price','calories'], num:{id:1,price:1,calories:1}, rows:[
+    {id:1,item:'Espresso',type:'drink',price:2.5,calories:5},
+    {id:2,item:'Cappuccino',type:'drink',price:3.5,calories:120},
+    {id:3,item:'Iced Latte',type:'drink',price:4.5,calories:180},
+    {id:4,item:'Hot Chocolate',type:'drink',price:4,calories:310},
+    {id:5,item:'Croissant',type:'food',price:3,calories:270},
+    {id:6,item:'Bagel',type:'food',price:3.5,calories:250},
+    {id:7,item:'Carrot Cake',type:'food',price:5.5,calories:420},
+    {id:8,item:'Fruit Cup',type:'food',price:4,calories:90}]},
+  orders:{cols:['id','customer','item_id'], num:{id:1,item_id:1}, rows:[
+    {id:1,customer:'Amira',item_id:2},
+    {id:2,customer:'Ben',item_id:5},
+    {id:3,customer:'Amira',item_id:7},
+    {id:4,customer:'Chloe',item_id:1},
+    {id:5,customer:'Ben',item_id:3},
+    {id:6,customer:'Chloe',item_id:2},
+    {id:7,customer:'Ben',item_id:5}]}
+};
+const clone=o=>JSON.parse(JSON.stringify(o));
+let TABLES=clone(ORIG);
+const TNAMES=Object.keys(ORIG);
+const FNS=['count','sum','avg','min','max'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const UP=s=>s.toUpperCase();
+const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let speed = 1;
+const sleep = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms * speed));
+const base=k=>k.split('.')[1];
+const isNum=k=>{const [t,c]=k.split('.'); return !!ORIG[t].num[c];};
+const tidy=v=>typeof v==='number'?Math.round(v*1e6)/1e6:v;
+
+/* ---------- reading helpers (from Lesson 5) ---------- */
+function lev(a,b){const m=[];for(let i=0;i<=a.length;i++){m[i]=[i];for(let j=1;j<=b.length;j++)m[i][j]=i?Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+(a[i-1]===b[j-1]?0:1)):j}return m[a.length][b.length]}
+function closest(w,list){let best=null,d=9;for(const c of list){const x=lev(w,c);if(x<d){d=x;best=c}}return d<=2?best:null}
+const ORDER_MSG='The order is: SELECT, FROM … JOIN … ON, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT.';
+function splitTop(s){ const out=[]; let depth=0, cur='', q=false; for(const ch of s){ if(ch==="'")q=!q; if(!q&&ch==='(')depth++; if(!q&&ch===')')depth--; if(!q&&ch===','&&depth===0){out.push(cur);cur=''} else cur+=ch; } out.push(cur); return out; }
+function tableCheck(t){ if(!TABLES[t]){ const s=closest(t,TNAMES); throw Error('There is no table called "'+t+'".'+(s?' Did you mean '+s+'?':' Our tables are menu and orders.')); } }
+function makeResolver(tables){
+  return function(name){
+    const n=name.trim().toLowerCase();
+    if(n.includes('.')){
+      const [t,c]=n.split('.');
+      if(!TABLES[t]) throw Error('There is no table called "'+t+'". Our tables are orders and menu.');
+      if(!tables.includes(t)) throw Error('The '+t+' table is not in your statement, so you can\'t use '+n+' here.');
+      if(!TABLES[t].cols.includes(c)){ const s=closest(c||'',TABLES[t].cols); throw Error('The '+t+' table has no column called "'+c+'".'+(s?' Did you mean '+t+'.'+s+'?':' Its columns are: '+TABLES[t].cols.join(', ')+'.')); }
+      return t+'.'+c;
+    }
+    const hits=tables.filter(t=>TABLES[t].cols.includes(n));
+    if(hits.length>1) throw Error('Both tables have a column called "'+n+'", so SQL doesn\'t know which one you mean. Please write '+hits.map(t=>t+'.'+n).join(' or ')+'.');
+    if(hits.length===1) return hits[0]+'.'+n;
+    const other=TNAMES.find(t=>!tables.includes(t)&&TABLES[t].cols.includes(n));
+    if(other) throw Error('"'+n+'" is a column of the '+other+' table, which is not in your statement.');
+    const all=[...new Set(tables.flatMap(t=>TABLES[t].cols))];
+    const s=closest(n,all);
+    throw Error('There is no column called "'+n+'".'+(s?' Did you mean '+s+'?':' The columns you can use are: '+all.join(', ')+'.'));
+  };
+}
+function parseAgg(t,res){
+  const fm=t.match(/^([A-Za-z_]\w*)(\s*)\(\s*([^()]*?)\s*\)$/);
+  if(!fm) return null;
+  const fn=fm[1].toLowerCase(), raw=fm[3].trim();
+  if(!FNS.includes(fn)){ const s=closest(fn,FNS); throw Error('"'+fm[1]+'" is not a receipt word.'+(s?' Did you mean '+UP(s)+'?':' Please use COUNT, SUM, AVG, MIN or MAX.')); }
+  if(fm[2]) throw Error('Please remove the space before the bracket: write '+UP(fn)+'( not '+UP(fn)+' (.');
+  if(!raw) throw Error('The brackets are empty. Please put something inside, like '+UP(fn)+(fn==='count'?'(*)':'(price)')+'.');
+  if(raw==='*'){ if(fn!=='count') throw Error('The star only works inside COUNT.'); return {fn,arg:'*',argSrc:'*'}; }
+  const key=res(raw);
+  if((fn==='sum'||fn==='avg') && !isNum(key)) throw Error('You can\'t add up words, so '+UP(fn)+'('+raw+') makes no sense. Please use a number column, like price.');
+  return {fn,arg:key,argSrc:raw.toLowerCase()};
+}
+function parseFrom(fp){
+  const f=fp.trim();
+  if(!f) throw Error('Please add a table name after FROM: orders or menu.');
+  if(/,/.test(f)) throw Error('Please join tables with JOIN … ON, not with a comma.');
+  if(/\b(right|full|cross)\s+(outer\s+)?join\b/i.test(f)) throw Error('Please use JOIN or LEFT JOIN, as in Lesson 5.');
+  const m=f.match(/^([A-Za-z_]\w*)(?:\s+((?:inner\s+|left\s+(?:outer\s+)?)?join)\s+([A-Za-z_]\w*)(?:\s+on\b\s*([\s\S]*))?)?$/i);
+  if(!m){ if(/\bjoin\b/i.test(f)) throw Error('The pattern is: FROM orders JOIN menu ON orders.item_id = menu.id'); const w=f.split(/\s+/); throw Error('After FROM '+w[0]+' I expected JOIN, WHERE, GROUP BY, ORDER BY or LIMIT, but found "'+w[1]+'".'); }
+  const t1=m[1].toLowerCase(); tableCheck(t1);
+  if(!m[2]) return {tables:[t1], join:null};
+  const kind=/left/i.test(m[2])?'left':'inner', t2=m[3].toLowerCase(); tableCheck(t2);
+  if(t1===t2) throw Error('Please join two different tables, like orders and menu.');
+  if(m[4]===undefined) throw Error('Please add ON to say how the rows match, like: ON orders.item_id = menu.id');
+  const cond=m[4].trim();
+  const cm=cond.match(/^([A-Za-z_][\w.]*)\s*=\s*([A-Za-z_][\w.]*)$/);
+  if(!cm) throw Error('The matching rule should look like: ON orders.item_id = menu.id');
+  const tables=[t1,t2], res=makeResolver(tables);
+  const a=res(cm[1]), b=res(cm[2]);
+  if(a.split('.')[0]===b.split('.')[0]) throw Error('Both sides of ON come from the same table. One side should come from '+t1+' and the other from '+t2+'.');
+  if(isNum(a)!==isNum(b)) throw Error(a+' and '+b+' hold different kinds of values, so they will never match. Did you mean orders.item_id = menu.id?');
+  const left=a.startsWith(t1+'.')?a:b, right=left===a?b:a;
+  return {tables, join:{kind,t2,left,right,src:cond}};
+}
+function parseItem(raw,res){
+  let t=raw.trim(), alias=null;
+  if(!t) throw Error('There is an extra comma in your SELECT list.');
+  const am=t.match(/^([\s\S]+?)\s+as\s+([A-Za-z_]\w*)$/i);
+  if(am){ t=am[1].trim(); alias=am[2]; }
+  const ag=parseAgg(t,res);
+  if(ag) return {type:'agg',fn:ag.fn,arg:ag.arg,label:alias||UP(ag.fn)+'('+ag.argSrc+')',alias};
+  if(/\(|\)/.test(t)) throw Error('Brackets go straight after a receipt word, like COUNT(*).');
+  if(t==='*') return {type:'star'};
+  if(/\s/.test(t)) throw Error('"'+t+'" looks like two words. Did you forget a comma?');
+  return {type:'col',key:res(t),label:alias||t.toLowerCase(),alias};
+}
+function parseSelect(src){
+  let s=src;
+  if(!/\bfrom\b/i.test(s)) throw Error('Please add FROM to say which table, for example: FROM menu');
+  const masked = s.replace(/'[^']*'|"[^"]*"/g, m => '_'.repeat(m.length));
+  if(/\border\b(?!\s+by\b)/i.test(masked)) throw Error('Please write ORDER BY as two words.');
+  if(/\bgroup\b(?!\s+by\b)/i.test(masked)) throw Error('Please write GROUP BY as two words.');
+  const find = re => { const m = re.exec(masked); return m ? m.index : -1; };
+  const iF=find(/\sfrom\s/i), iW=find(/\swhere\b/i), iG=find(/\sgroup\s+by\b/i), iH=find(/\shaving\b/i), iO=find(/\sorder\s+by\b/i), iL=find(/\slimit\b/i);
+  if(iF<0) throw Error('The pattern is: SELECT something FROM table');
+  const iJ=find(/\s(join|on)\b/i);
+  const seq=[['WHERE',iW],['GROUP BY',iG],['HAVING',iH],['ORDER BY',iO],['LIMIT',iL]].filter(x=>x[1]>=0);
+  for(let i=1;i<seq.length;i++) if(seq[i][1]<seq[i-1][1]) throw Error('Please put '+seq[i-1][0]+' before '+seq[i][0]+'. '+ORDER_MSG);
+  if(iJ>=0 && seq.length && iJ>seq[0][1]) throw Error('JOIN … ON goes straight after FROM, before '+seq[0][0]+'.');
+  if(iH>=0 && iG<0) throw Error('HAVING checks piles, so please add GROUP BY before HAVING.');
+  const marks=seq.map(x=>x[1]);
+  const end = i => { const later = marks.filter(x=>x>i); return later.length?Math.min(...later):s.length; };
+  const selPart=s.slice(6,iF).trim();
+  if(!selPart) throw Error('Please say what you want after SELECT.');
+  const fromInfo=parseFrom(s.slice(iF, marks.length?Math.min(...marks):s.length).replace(/^\s*from\s*/i,''));
+  const res=makeResolver(fromInfo.tables);
+  const items=splitTop(selPart).map(x=>parseItem(x,res));
+  const star=items.some(i=>i.type==='star');
+  if(star && items.length>1) throw Error('Please use * on its own, not mixed with other things.');
+  const aggs=items.filter(i=>i.type==='agg'), plain=items.filter(i=>i.type==='col');
+  let group=[];
+  if(iG>=0){
+    const gs=s.slice(iG,end(iG)).replace(/^\s*group\s+by\s*/i,'').trim();
+    if(!gs) throw Error('Please say what to make piles of, like: GROUP BY type');
+    group=gs.split(',').map(x=>{ const c=x.trim(); if(!c) throw Error('There is an extra comma after GROUP BY.'); return res(c); });
+    if(star) throw Error('Please don\'t use * with GROUP BY.');
+    for(const p of plain) if(!group.includes(p.key)) throw Error('The pile rule: '+p.label+' is not in GROUP BY and not inside a receipt word.');
+  } else if(aggs.length && plain.length) throw Error('You can\'t mix '+plain[0].label+' with '+UP(aggs[0].fn)+' on its own. Please add GROUP BY '+plain[0].label+'.');
+  const isAgg=group.length>0||aggs.length>0;
+  const ctx={items,group,res};
+  let where=null, whereSrc='', having=null, havingSrc='', order=null, orderSrc='', limit=null;
+  if(iW>=0){ whereSrc=s.slice(iW,end(iW)).replace(/^\s*where\b\s*/i,'').trim(); if(!whereSrc) throw Error('WHERE needs a test after it, like: WHERE item = \'Bagel\''); if(/\b(count|sum|avg|min|max)\s*\(/i.test(whereSrc)) throw Error('Receipt words can\'t go in WHERE. Please use HAVING after GROUP BY.'); where=parseConds(whereSrc,'where',ctx); }
+  if(iH>=0){ havingSrc=s.slice(iH,end(iH)).replace(/^\s*having\b\s*/i,'').trim(); if(!havingSrc) throw Error('HAVING needs a test after it.'); having=parseConds(havingSrc,'having',ctx); }
+  if(iO>=0){
+    orderSrc=s.slice(iO,end(iO)).replace(/^\s*order\s+by\s*/i,'').trim();
+    if(!orderSrc) throw Error('Please say what to sort by, like: ORDER BY price');
+    order=splitTop(orderSrc).map(p=>{ let t=p.trim(); let dir='asc'; const dm=t.match(/^([\s\S]+?)\s+(asc|desc)$/i); if(dm){t=dm[1].trim();dir=dm[2].toLowerCase();} if(isAgg) return {e:resolveExpr(t,ctx,'ORDER BY'),dir,src:t}; return {e:{kind:'col',key:res(t)},dir,src:t}; });
+  }
+  if(iL>=0){ const v=s.slice(iL).replace(/^\s*limit\s*/i,'').trim(); if(!/^\d+$/.test(v)) throw Error('LIMIT needs a whole number, like: LIMIT 3'); limit=parseInt(v,10); }
+  return {kind:'select',items,aggs,star,group,isAgg,from:fromInfo,where,whereSrc,having,havingSrc,order,orderSrc,limit};
+}
+function resolveExpr(t,ctx,where){
+  const ag=parseAgg(t,ctx.res);
+  if(ag) return {kind:'agg',fn:ag.fn,arg:ag.arg};
+  const low=t.toLowerCase();
+  const ai=ctx.items.findIndex(i=>i.alias && i.alias.toLowerCase()===low);
+  if(ai>=0){ if(where==='HAVING') throw Error('Please write the receipt word itself in HAVING, not the name from AS.'); return {kind:'item',idx:ai}; }
+  const key=ctx.res(t);
+  if(ctx.group.includes(key)) return {kind:'col',key};
+  throw Error(where+' works on whole piles. Please use the pile label or a receipt word.');
+}
+function tokenize(s){
+  const re=/\s*([A-Za-z_]\w*\s*\([^()]*\)|'[^']*'|"[^"]*"|<=|>=|!=|<>|=|<|>|-?\d+(?:\.\d+)?|[A-Za-z_][\w.]*)/y; const out=[];
+  re.lastIndex=0;
+  while(re.lastIndex<s.length){
+    const start=re.lastIndex; const m=re.exec(s);
+    if(!m){ const bad=s.slice(start).trim(); if(!bad) break;
+      if(bad[0]==="'"||bad[0]==='"') throw Error('A quote was opened but never closed. Text needs a quote on both sides: \'Bagel\'');
+      throw Error('I don\'t understand "'+bad.slice(0,12)+'" in your test.'); }
+    out.push(m[1]);
+  }
+  return out;
+}
+function parseConds(s,kind,ctx){
+  const t=tokenize(s); let i=0; const groups=[[]];
+  const OPS=['=','!=','<>','<','>','<=','>='];
+  while(true){
+    const lhs=t[i++];
+    if(!lhs) throw Error('Please write a full test, like: item = \'Bagel\'');
+    let e;
+    if(kind==='where'){ if(!/^[A-Za-z_][\w.]*$/.test(lhs)) throw Error('A test starts with a column name, like: price < 4'); e={kind:'col',key:ctx.res(lhs)}; }
+    else e=resolveExpr(lhs,ctx,'HAVING');
+    let op=t[i++];
+    if(!op) throw Error('After "'+lhs+'" please add a comparison, like = or >');
+    let val;
+    if(op.toLowerCase()==='is'){
+      let nx=(t[i++]||'').toLowerCase(), not=false;
+      if(nx==='not'){ not=true; nx=(t[i++]||'').toLowerCase(); }
+      if(nx!=='null') throw Error('IS is used for empty values: please write IS NULL or IS NOT NULL.');
+      op=not?'notnull':'isnull'; val=null;
+    } else {
+      if(op.toLowerCase()==='like') op='like';
+      else if(!OPS.includes(op)) throw Error('"'+op+'" is not a comparison. Please use = != < > <= >= or IS NULL');
+      const v=t[i++];
+      if(v===undefined) throw Error('Please finish the test: '+lhs+' '+op+' ... what?');
+      if(v.toLowerCase()==='null') throw Error('Please write IS NULL instead of '+op+' NULL.');
+      if(/^['"]/.test(v)) val=v.slice(1,-1);
+      else if(/^-?\d/.test(v)) val=parseFloat(v);
+      else throw Error('Text needs quotes: please write \''+v+'\' instead of '+v+'.');
+    }
+    groups[groups.length-1].push({e,op,val,src:lhs});
+    const j=t[i];
+    if(j===undefined) break;
+    const jl=j.toLowerCase();
+    if(jl==='and'){i++} else if(jl==='or'){i++;groups.push([])}
+    else throw Error('Please join two tests with AND or OR. I found "'+j+'".');
+  }
+  return groups;
+}
+function cmpVal(x,y){ if(x===null&&y===null) return 0; if(x===null) return -1; if(y===null) return 1; return typeof x==='string' ? String(x).localeCompare(String(y),undefined,{sensitivity:'base'}) : x-y; }
+function compare(a,op,b){
+  if(op==='isnull') return a===null||a===undefined;
+  if(op==='notnull') return !(a===null||a===undefined);
+  if(a===null||a===undefined) return false;
+  if(op==='like'){ const re=new RegExp('^'+String(b).replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/%/g,'.*').replace(/_/g,'.')+'$','i'); return re.test(String(a)); }
+  if(typeof a==='number' && typeof b==='string' && b.trim()!=='' && !isNaN(b)) b=parseFloat(b);
+  if(typeof a==='string'){a=a.toLowerCase(); b=String(b).toLowerCase();}
+  switch(op){case '=':return a===b;case '!=':case '<>':return a!==b;case '<':return a<b;case '>':return a>b;case '<=':return a<=b;case '>=':return a>=b}
+  return false;
+}
+function aggValue(a,rows){
+  if(a.fn==='count') return a.arg==='*'?rows.length:rows.filter(r=>r[a.arg]!==null&&r[a.arg]!==undefined).length;
+  const vals=rows.map(r=>r[a.arg]).filter(v=>v!==null&&v!==undefined);
+  if(!vals.length) return null;
+  if(a.fn==='sum') return Math.round(vals.reduce((x,y)=>x+y,0)*100)/100;
+  if(a.fn==='avg') return vals.reduce((x,y)=>x+y,0)/vals.length;
+  if(a.fn==='min') return vals.reduce((x,y)=>cmpVal(y,x)<0?y:x);
+  if(a.fn==='max') return vals.reduce((x,y)=>cmpVal(y,x)>0?y:x);
+}
+function evalExpr(e,g){ if(e.kind==='agg') return aggValue(e,g.rows); if(e.kind==='item') return g.vals[e.idx]; return g.rows.length?g.rows[0][e.key]:null; }
+const passRow=(row,where)=>!where||where.some(g=>g.every(c=>compare(row[c.e.key],c.op,c.val)));
+const passGroup=(g,having)=>!having||having.some(gr=>gr.every(c=>compare(evalExpr(c.e,g),c.op,c.val)));
+function fmtKey(key,v){ if(v===null||v===undefined) return 'empty'; return base(key)==='price'?'£'+Number(v).toFixed(2):String(v); }
+function fmtItem(it,v){
+  if(it.type==='col') return fmtKey(it.key,v);
+  if(v===null||v===undefined) return 'empty';
+  if(it.fn==='count') return String(v);
+  if(base(it.arg||'x.x')==='price') return '£'+v.toFixed(2);
+  if(typeof v==='number') return String(Math.round(v*1000)/1000);
+  return String(v);
+}
+const pre=(t,r)=>{ const o={}; TABLES[t].cols.forEach(c=>o[t+'.'+c]=r[c]); return o; };
+function buildData(q){
+  const [t1]=q.from.tables, T1=TABLES[t1];
+  const nul=t=>{ const o={}; TABLES[t].cols.forEach(c=>o[t+'.'+c]=null); return o; };
+  let rows=[], trace=[], cols=T1.cols.map(c=>t1+'.'+c), n=0;
+  if(!q.from.join){ rows=T1.rows.map(r=>Object.assign({__id:++n},pre(t1,r))); }
+  else{
+    const J=q.from.join, T2=TABLES[J.t2];
+    cols=cols.concat(T2.cols.map(c=>J.t2+'.'+c));
+    T1.rows.forEach((r,li)=>{
+      const L=pre(t1,r), ri=[];
+      T2.rows.forEach((r2,k)=>{ if(L[J.left]===r2[base(J.right)]) ri.push(k); });
+      const made=[];
+      ri.forEach(k=>{ const row=Object.assign({__id:++n},L,pre(J.t2,T2.rows[k])); rows.push(row); made.push(row.__id); });
+      if(!ri.length && J.kind==='left'){ const row=Object.assign({__id:++n},L,nul(J.t2)); rows.push(row); made.push(row.__id); }
+      trace.push({li,ri,made});
+    });
+  }
+  return {cols,rows,trace};
+}
+function execute(q){
+  const ds=buildData(q);
+  const filtered=ds.rows.filter(r=>passRow(r,q.where));
+  if(!q.isAgg){
+    const sorted=q.order?filtered.slice().sort((a,b)=>{for(const o of q.order){const r=cmpVal(a[o.e.key],b[o.e.key]); if(r) return o.dir==='desc'?-r:r;} return 0;}):filtered.slice();
+    return {ds,agg:false,filtered,sorted,final:q.limit!==null?sorted.slice(0,q.limit):sorted};
+  }
+  let groups;
+  if(q.group.length){
+    const map=new Map();
+    for(const r of filtered){ const k=q.group.map(c=>String(r[c])).join('\u0001'); if(!map.has(k)) map.set(k,{key:q.group.map(c=>r[c]),rows:[]}); map.get(k).rows.push(r); }
+    groups=[...map.values()].sort((a,b)=>{for(let i=0;i<a.key.length;i++){const r=cmpVal(a.key[i],b.key[i]); if(r) return r;} return 0;});
+  } else groups=[{key:[],rows:filtered}];
+  groups.forEach((g,i)=>{ g.i=i; g.vals=q.items.map(it=>it.type==='col'?g.rows[0][it.key]:aggValue(it,g.rows)); g.pass=passGroup(g,q.having); });
+  const kept=groups.filter(g=>g.pass);
+  const sorted=q.order?kept.slice().sort((a,b)=>{for(const o of q.order){const r=cmpVal(evalExpr(o.e,a),evalExpr(o.e,b)); if(r) return o.dir==='desc'?-r:r;} return 0;}):kept.slice();
+  return {ds,agg:true,filtered,groups,kept,sorted,final:q.limit!==null?sorted.slice(0,q.limit):sorted};
+}
+function label(ds,k){ const b=base(k); return ds.cols.filter(c=>base(c)===b).length>1?k:b; }
+function answerTable(q,res){
+  if(res.agg) return {labels:q.items.map(it=>it.label), kinds:q.items.map(it=>it.type==='col'?'gk':'agg'), rows:res.final.map(g=>q.items.map((it,k)=>fmtItem(it,g.vals[k])))};
+  const keys=q.star?res.ds.cols:q.items.map(i=>i.key);
+  const labels=q.star?res.ds.cols.map(k=>label(res.ds,k)):q.items.map(i=>i.label);
+  return {labels, kinds:keys.map(()=>''), rows:res.final.map(r=>keys.map(k=>fmtKey(k,r[k])))};
+}
+const groupName=(g,q)=>g.key.length?g.key.map((v,i)=>fmtKey(q.group[i],v)).join(' + '):'all rows';
+
+/* ---------- INSERT / UPDATE / DELETE ---------- */
+function literal(raw,key,where){
+  const v=raw.trim(), col=base(key);
+  if(/^null$/i.test(v)) return null;
+  if(/^'[^']*'$/.test(v)){ if(isNum(key)) throw Error(col+' holds numbers, so please write '+v.slice(1,-1)+' without quotes'+(col==='price'?' (and without a £ sign)':'')+'.'); return v.slice(1,-1); }
+  if(/^"[^"]*"$/.test(v)) throw Error('Please use single quotes for text: \''+v.slice(1,-1)+'\'.');
+  if(/^£/.test(v)) throw Error('Please write prices without the £ sign: just '+v.slice(1)+'.');
+  if(/^-?\d+(\.\d+)?$/.test(v)){ if(!isNum(key)) throw Error(col+' holds words, so please put the value in quotes: \''+v+'\'.'); return parseFloat(v); }
+  if(/^'/.test(v)) throw Error('A quote was opened but never closed. Text needs a quote on both sides.');
+  if(!v) throw Error('A value is missing '+where+'. Please check your commas.');
+  throw Error('Text needs quotes: please write \''+v+'\' instead of '+v+'.');
+}
+function idCheck(t,newRows,ignore){
+  const existing=TABLES[t].rows.filter((r,i)=>!ignore||!ignore.includes(i)).map(r=>r.id);
+  const seen=new Set(existing);
+  for(const r of newRows){
+    if(r.id===null||r.id===undefined) throw Error('Every row needs its own id. Please give an id for the new '+t+' row.');
+    if(seen.has(r.id)) throw Error('There is already a '+t+' row with id '+r.id+'. Each id must be different, so please choose another number.');
+    seen.add(r.id);
+  }
+}
+function fkCheckOrders(rows){
+  for(const r of rows){ if(r.item_id===null) continue; if(!TABLES.menu.rows.some(m=>m.id===r.item_id)) throw Error('The database refused: there is no menu item with id '+r.item_id+', so this order would point at nothing. (This protection is called a foreign key.)'); }
+}
+function parseInsert(s){
+  if(!/^insert\s+into\b/i.test(s)) throw Error('Please write INSERT INTO, like: INSERT INTO menu (id, item) VALUES (9, \'Muffin\')');
+  const m=s.match(/^insert\s+into\s+([A-Za-z_]\w*)\s*([\s\S]*)$/i);
+  if(!m) throw Error('Please name the table after INSERT INTO, like: INSERT INTO menu');
+  const t=m[1].toLowerCase(); tableCheck(t);
+  let rest=m[2].trim(), cols;
+  if(rest.startsWith('(')){
+    const close=rest.indexOf(')'); if(close<0) throw Error('The column list was opened with ( but never closed with ).');
+    cols=rest.slice(1,close).split(',').map(x=>x.trim().toLowerCase());
+    if(cols.some(c=>!c)) throw Error('There is an extra comma in your column list.');
+    cols.forEach(c=>{ if(!TABLES[t].cols.includes(c)){ const sg=closest(c,TABLES[t].cols); throw Error('The '+t+' table has no column called "'+c+'".'+(sg?' Did you mean '+sg+'?':' Its columns are: '+TABLES[t].cols.join(', ')+'.')); } });
+    if(new Set(cols).size!==cols.length) throw Error('A column is listed twice. Please name each column once.');
+    rest=rest.slice(close+1).trim();
+  } else cols=null;
+  const vm=rest.match(/^values\s*([\s\S]*)$/i);
+  if(!vm) throw Error(rest?'After the column list I expected VALUES, but found "'+rest.split(/\s+/)[0]+'".':'Please add VALUES with the new row in brackets, like: VALUES (9, \'Muffin\')');
+  let vs=vm[1].trim();
+  if(!vs.startsWith('(')) throw Error('Please put the new values in brackets: VALUES (9, \'Muffin\', …)');
+  const groups=[]; let depth=0, q=false, cur='';
+  for(const ch of vs){
+    if(ch==="'") q=!q;
+    if(!q&&ch==='('){ depth++; if(depth===1){cur='';continue;} }
+    if(!q&&ch===')'){ depth--; if(depth===0){groups.push(cur);cur='';continue;} }
+    if(depth>0) cur+=ch;
+    else if(!q && !/[\s,]/.test(ch)) throw Error('Please separate rows with commas, like: VALUES (9, …), (10, …)');
+  }
+  if(depth!==0||q) throw Error(q?'A quote was opened but never closed.':'A bracket was opened but never closed. Please add the ).');
+  const useCols=cols||TABLES[t].cols;
+  const rows=groups.map(g=>{
+    const vals=splitTop(g);
+    if(vals.length!==useCols.length) throw Error(cols?'You listed '+useCols.length+' column'+(useCols.length===1?'':'s')+' but gave '+vals.length+' value'+(vals.length===1?'':'s')+'. The two lists must be the same length, in the same order.':'Without a column list you must give all '+useCols.length+' values ('+useCols.join(', ')+'), but you gave '+vals.length+'. It is safer to name the columns.');
+    const row={}; TABLES[t].cols.forEach(c=>row[c]=null);
+    useCols.forEach((c,i)=>row[c]=literal(vals[i],t+'.'+c,'in VALUES'));
+    return row;
+  });
+  idCheck(t,rows);
+  if(t==='orders') fkCheckOrders(rows);
+  return {kind:'insert',t,cols:useCols,rows,noCols:!cols};
+}
+function parseSetValue(raw,key,t){
+  const v=raw.trim();
+  const am=v.match(/^([A-Za-z_][\w.]*)\s*([-+*\/])\s*(-?\d+(?:\.\d+)?)$/);
+  if(am){
+    const src=makeResolver([t])(am[1]);
+    if(!isNum(src)||!isNum(key)) throw Error('You can only do sums with number columns, like: price = price + 0.2');
+    const n=parseFloat(am[3]), op=am[2];
+    return {calc:true,src,op,n,text:v};
+  }
+  if(/^[A-Za-z_][\w.]*$/.test(v) && !/^null$/i.test(v)){
+    const low=v.toLowerCase().replace(/^.*\./,'');
+    if(TABLES[t].cols.includes(low)){ const src=makeResolver([t])(v); if(isNum(src)!==isNum(key)) throw Error('You can\'t copy '+low+' into '+base(key)+': one holds numbers and the other words.'); return {copy:true,src,text:v}; }
+  }
+  return {lit:literal(v,key,'after SET'),text:v};
+}
+function evalSet(a,row){
+  if(a.v.calc){ const x=row[base(a.v.src)]; if(x===null) return null; const r=a.v.op==='+'?x+a.v.n:a.v.op==='-'?x-a.v.n:a.v.op==='*'?x*a.v.n:x/a.v.n; return base(a.key)==='price'?Math.round(r*100)/100:tidy(r); }
+  if(a.v.copy) return row[base(a.v.src)];
+  return a.v.lit;
+}
+function parseWhereFor(t,src){
+  if(!src) throw Error('WHERE needs a test after it, like: WHERE item = \'Bagel\'');
+  if(/\b(count|sum|avg|min|max)\s*\(/i.test(src)) throw Error('Receipt words can\'t go in WHERE.');
+  return parseConds(src,'where',{items:[],group:[],res:makeResolver([t])});
+}
+function parseUpdate(s){
+  const m=s.match(/^update\s+([A-Za-z_]\w*)\s*([\s\S]*)$/i);
+  if(!m) throw Error('Please name the table after UPDATE, like: UPDATE menu SET price = 3.8 WHERE item = \'Cappuccino\'');
+  const t=m[1].toLowerCase(); tableCheck(t);
+  let rest=m[2].trim();
+  if(!/^set\b/i.test(rest)) throw Error('After UPDATE '+t+' please write SET, like: UPDATE '+t+' SET price = 3.8 WHERE …');
+  rest=rest.replace(/^set\b\s*/i,'');
+  const masked=rest.replace(/'[^']*'/g,mm=>'_'.repeat(mm.length));
+  const iW=masked.search(/(^|\s)where\b/i);
+  const setPart=(iW>=0?rest.slice(0,iW):rest).trim(), whereSrc=iW>=0?rest.slice(iW).replace(/^\s*where\b\s*/i,'').trim():'';
+  if(!setPart) throw Error('Please say what to change after SET, like: SET price = 3.8');
+  if(/\bfrom\b/i.test(setPart.replace(/'[^']*'/g,''))) throw Error('UPDATE doesn\'t use FROM. The pattern is: UPDATE menu SET price = 3.8 WHERE …');
+  const res=makeResolver([t]);
+  const assigns=splitTop(setPart).map(p=>{
+    const am=p.trim().match(/^([A-Za-z_][\w.]*)\s*=\s*([\s\S]+)$/);
+    if(!am){ if(!p.trim()) throw Error('There is an extra comma after SET.'); throw Error('Each change after SET should look like: price = 3.8'); }
+    const key=res(am[1]);
+    return {key,col:base(key),v:parseSetValue(am[2],key,t)};
+  });
+  if(new Set(assigns.map(a=>a.col)).size!==assigns.length) throw Error('A column is set twice. Please set each column once.');
+  const where=iW>=0?parseWhereFor(t,whereSrc):null;
+  return {kind:'update',t,assigns,where,whereSrc};
+}
+function parseDelete(s){
+  if(/^delete\s+\*/i.test(s)) throw Error('No star needed: DELETE always removes whole rows. Please write DELETE FROM menu WHERE …');
+  if(!/^delete\s+from\b/i.test(s)) throw Error('Please write DELETE FROM, like: DELETE FROM menu WHERE item = \'Fruit Cup\'');
+  const m=s.match(/^delete\s+from\s+([A-Za-z_]\w*)\s*([\s\S]*)$/i);
+  if(!m) throw Error('Please name the table after DELETE FROM.');
+  const t=m[1].toLowerCase(); tableCheck(t);
+  const rest=m[2].trim();
+  if(rest && !/^where\b/i.test(rest)) throw Error('After DELETE FROM '+t+' I expected WHERE, but found "'+rest.split(/\s+/)[0]+'".');
+  const whereSrc=rest.replace(/^where\b\s*/i,'').trim();
+  const where=rest?parseWhereFor(t,whereSrc):null;
+  return {kind:'delete',t,where,whereSrc};
+}
+function parse(src){
+  const s=src.trim().replace(/;\s*$/,'').trim();
+  if(!s) throw Error('Please type a statement first: SELECT, INSERT, UPDATE or DELETE.');
+  if(/;\s*\S/.test(s.replace(/'[^']*'/g,''))) throw Error('Please run one statement at a time.');
+  const w=(s.match(/^\w+/)||[''])[0].toLowerCase();
+  if(w==='select') return parseSelect(s);
+  if(w==='insert') return parseInsert(s);
+  if(w==='update') return parseUpdate(s);
+  if(w==='delete') return parseDelete(s);
+  if(['drop','create','alter','truncate'].includes(w)) throw Error(UP(w)+' changes the shape of tables, so it is switched off in this playground. Please use SELECT, INSERT, UPDATE or DELETE.');
+  const sg=closest(w,['select','insert','update','delete']);
+  throw Error('Please start with SELECT, INSERT, UPDATE or DELETE.'+(sg&&sg!==w?' Did you mean '+UP(sg)+'?':''));
+}
+function matchRows(q){ return TABLES[q.t].rows.map((r,i)=>passRow(pre(q.t,r),q.where)?i:-1).filter(i=>i>=0); }
+function plan(q){
+  if(q.kind==='insert') return {q};
+  const idx=matchRows(q);
+  if(q.kind==='delete'){
+    if(q.t==='menu'){
+      const blocked=idx.map(i=>TABLES.menu.rows[i]).map(m=>({m,refs:TABLES.orders.rows.filter(o=>o.item_id===m.id)})).filter(x=>x.refs.length);
+      if(blocked.length===1){ const {m,refs}=blocked[0]; throw Error('The database refused: '+m.item+' has '+refs.length+' order'+(refs.length===1?'':'s')+' pointing at it (order'+(refs.length===1?' ':'s ')+refs.map(o=>o.id).join(' and ')+'). Removing it would leave '+(refs.length===1?'that order':'those orders')+' pointing at nothing. (This protection is called a foreign key.)'); }
+      if(blocked.length>1) throw Error('The database refused: '+list(blocked.map(x=>x.m.item))+' have orders pointing at them. Removing them would leave those orders pointing at nothing, so nothing was deleted. (This protection is called a foreign key.)');
+    }
+    return {q,idx};
+  }
+  const changes=idx.map(i=>{ const r=TABLES[q.t].rows[i]; return {i,cells:q.assigns.map(a=>({col:a.col,old:r[a.col],nu:evalSet(a,r)}))}; });
+  const after=TABLES[q.t].rows.map(r=>Object.assign({},r));
+  changes.forEach(c=>c.cells.forEach(x=>after[c.i][x.col]=x.nu));
+  if(q.assigns.some(a=>a.col==='id')){
+    const ids=after.map(r=>r.id); if(ids.some(v=>v===null)) throw Error('Every row needs an id, so id can\'t be set to empty.');
+    if(new Set(ids).size!==ids.length) throw Error('That would give two '+q.t+' rows the same id. Each id must be different.');
+    if(q.t==='menu') changes.forEach(c=>{ const old=TABLES.menu.rows[c.i].id, nu=after[c.i].id; if(old!==nu && TABLES.orders.rows.some(o=>o.item_id===old)) throw Error('The database refused: orders point at menu id '+old+', so it can\'t be changed. (Foreign key.)'); });
+  }
+  if(q.t==='orders' && q.assigns.some(a=>a.col==='item_id')) fkCheckOrders(changes.map(c=>after[c.i]));
+  return {q,idx,changes,after};
+}
+function applyPlan(p){
+  const q=p.q, T=TABLES[q.t];
+  if(q.kind==='insert'){ q.rows.forEach(r=>T.rows.push(r)); return q.rows.length; }
+  if(q.kind==='delete'){ T.rows=T.rows.filter((r,i)=>!p.idx.includes(i)); return p.idx.length; }
+  T.rows=p.after; return p.changes.length;
+}
+
+/* ---------- plain English ---------- */
+const OPW={'=':'is','!=':'is not','<>':'is not','<':'is less than','>':'is more than','<=':'is at most','>=':'is at least','like':'looks like','isnull':'is empty','notnull':'is not empty'};
+function list(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1]}
+function aggWords(a){ if(a.fn==='count') return a.arg==='*'?'the number of rows':'the number of filled-in '+base(a.arg)+' values'; if((a.fn==='min'||a.fn==='max') && !isNum(a.arg)) return 'the '+(a.fn==='min'?'first':'last')+' '+base(a.arg)+' from A to Z'; return ({sum:'the total',avg:'the average',min:'the smallest',max:'the biggest'})[a.fn]+' '+(a.fn==='sum'||a.fn==='avg'?'of ':'')+base(a.arg); }
+function exprWords(e,q){ if(e.kind==='agg') return aggWords(e); if(e.kind==='item'){ const it=q.items[e.idx]; return it.type==='agg'?aggWords(it):it.label; } return base(e.key); }
+function condWords(cs,q){ return cs.map(g=>g.map(c=>(c.e.kind==='col'?base(c.e.key):exprWords(c.e,q))+' '+OPW[c.op]+(c.val===null?'':' '+(typeof c.val==='string'?'“'+esc(c.val)+'”':c.val))).join(' <b>and</b> ')).join(' <b>or</b> '); }
+function valWords(col,v){ if(v===null) return 'empty'; if(col==='price') return '£'+Number(v).toFixed(2); return typeof v==='string'?'“'+esc(v)+'”':String(v); }
+function english(q){
+  let s;
+  if(q.kind==='insert') s='Please add '+(q.rows.length===1?'a new row':q.rows.length+' new rows')+' <span class="k-chg">into the '+q.t+'</span>: '+q.rows.map(r=>q.cols.map(c=>c+' '+valWords(c,r[c])).join(', ')).join('; ');
+  else if(q.kind==='update') s='Please change the <span class="k-chg">'+q.t+'</span>: set '+q.assigns.map(a=>a.col+' to '+(a.v.calc?a.v.text.replace(/\*/,'×'):a.v.copy?'the '+base(a.v.src):valWords(a.col,a.v.lit))).join(' and ')+(q.where?', <span class="k-where">but only where '+condWords(q.where,q)+'</span>':', <span class="k-chg">in every row</span>');
+  else if(q.kind==='delete') s='Please remove rows <span class="k-chg">from the '+q.t+'</span>'+(q.where?', <span class="k-where">but only where '+condWords(q.where,q)+'</span>':', <span class="k-chg">every single one of them</span>');
+  else {
+    const t1=q.from.tables[0], J=q.from.join;
+    if(q.isAgg) s='Please tell me '+list(q.items.map(it=>it.type==='col'?'<span class="k-grp">'+it.label+'</span>':'<span class="k-agg">'+aggWords(it)+'</span>'));
+    else s='Please show me <span class="k-sel">'+(q.star?'every column':list(q.items.map(i=>i.label)))+'</span>';
+    s+=' <span class="k-from">from the '+t1+(J?(J.kind==='left'?', keeping every '+t1+' row and adding any matching '+J.t2:', looking each one up in the '+J.t2):'')+'</span>';
+    if(q.where) s+=' <span class="k-where">(only rows where '+condWords(q.where,q)+')</span>';
+    if(q.group.length) s+=', <span class="k-grp">with one pile per '+q.group.map(base).join(' and ')+'</span>';
+    if(q.having) s+=', <span class="k-grp">but only piles where '+condWords(q.having,q)+'</span>';
+    if(q.order) s+=', <span class="k-ord">sorted by '+q.order.map((o,i)=>(i?'then by ':'')+exprWords(o.e,q)+(o.dir==='desc'?' (biggest first)':'')).join(', ')+'</span>';
+    if(q.limit!==null) s+=', <span class="k-lim">only the first '+q.limit+'</span>';
+  }
+  return '<span class="lbl">In plain English</span>'+s+'.';
+}
+
+/* ---------- drawing ---------- */
+const stage=$('#stage'), tw=$('#tw'), stepsEl=$('#steps'), till=$('#till'), tillLines=$('#till-lines');
+let steps=[];
+function buildSteps(list){ stepsEl.innerHTML=list.map((x,i)=>'<li style="--c:var('+x[0]+')"><span class="n">'+(i+1)+'</span><span class="t">'+x[1]+'</span></li>').join(''); steps=[...stepsEl.children]; }
+const SELECT_STEPS=[['--from','<span class="chip from">FROM … JOIN</span> Build the table'],['--where','<span class="chip where">WHERE</span> Keep the rows that pass'],['--grp','<span class="chip grp">GROUP BY</span> Make piles'],['--sel','<span class="chip sel">SELECT</span> Pick columns, or squash each pile'],['--grp','<span class="chip grp">HAVING</span> Keep the piles that pass'],['--ord','<span class="chip ord">ORDER BY</span> Line them up'],['--lim','<span class="chip lim">LIMIT</span> Keep only the first few']];
+function setStep(i,state,html){ if(!steps[i]) return; steps[i].className=state; if(html!==undefined) steps[i].querySelector('.t').innerHTML=html; }
+let runId=0;
+function tdFor(key,v){ const nul=(v===null||v===undefined); return '<td data-col="'+key+'" class="'+(nul?'null':(isNum(key)?'num':''))+'">'+esc(fmtKey(key,v))+'</td>'; }
+function plainTable(t,withMark,hl){
+  const T=TABLES[t];
+  let h='<table class="data" data-t="'+t+'"><thead><tr>'+(withMark?'<th class="mark"></th>':'')+T.cols.map(c=>'<th class="'+(c===hl?'oncol':'')+'">'+c+'</th>').join('')+'</tr></thead><tbody>';
+  T.rows.forEach((r,i)=>{ h+='<tr data-i="'+i+'">'+(withMark?'<td class="mark"></td>':'')+T.cols.map(c=>tdFor(t+'.'+c,r[c]).replace('<td ','<td data-c="'+c+'" ')).join('')+'</tr>'; });
+  return h+'</tbody></table>';
+}
+const card=(t,inner)=>'<div class="tcard"><span class="tname">'+t+'</span><div class="tbox">'+inner+'</div></div>';
+function drawLive(){ $('#live').innerHTML=card('menu',plainTable('menu',false))+card('orders',plainTable('orders',false)); }
+function fullTable(ds,rows){
+  let h='<table class="data"><thead><tr><th class="mark"></th>'+ds.cols.map(k=>'<th data-col="'+k+'">'+esc(label(ds,k))+'</th>').join('')+'</tr></thead><tbody>';
+  rows.forEach(r=>{ h+='<tr data-id="'+r.__id+'"><td class="mark"></td>'+ds.cols.map(k=>tdFor(k,r[k])).join('')+'</tr>'; });
+  return h+'</tbody></table>';
+}
+function groupTable(q,groups,withMark){
+  let h='<table class="data result"><thead><tr>'+(withMark?'<th class="mark"></th>':'')+q.items.map(it=>'<th class="'+(it.type==='col'?'gk':'agg')+'">'+esc(it.label)+'</th>').join('')+'</tr></thead><tbody>';
+  groups.forEach((g,i)=>{ h+='<tr data-g="'+g.i+'" style="animation-delay:'+(i*60)+'ms">'+(withMark?'<td class="mark"></td>':'')+q.items.map((it,k)=>{ const v=g.vals[k], nul=(v===null||v===undefined); return '<td class="'+(nul?'null':(typeof v==='number'?'num':''))+'">'+esc(fmtItem(it,v))+'</td>'; }).join('')+'</tr>'; });
+  return h+'</tbody></table>';
+}
+function finalTable(q,res){
+  const A=answerTable(q,res);
+  if(!A.rows.length) return '<p style="padding:20px;color:var(--muted)">No rows are left, so the answer is empty. That is a real answer too!</p>';
+  let h='<table class="data result"><thead><tr>'+A.labels.map((l,i)=>'<th class="'+A.kinds[i]+'">'+esc(l)+'</th>').join('')+'</tr></thead><tbody>';
+  A.rows.forEach((r,i)=>{ h+='<tr style="animation-delay:'+(i*40)+'ms">'+r.map(v=>'<td class="'+(v==='empty'?'null':'')+'">'+esc(v)+'</td>').join('')+'</tr>'; });
+  return h+'</tbody></table>';
+}
+async function flip(tbody,rowsInOrder){
+  const vis=rowsInOrder.filter(t=>!t.hidden);
+  const first=new Map(vis.map(t=>[t,t.getBoundingClientRect().top]));
+  rowsInOrder.forEach(t=>tbody.appendChild(t));
+  vis.forEach(t=>{const d=first.get(t)-t.getBoundingClientRect().top; t.style.transition='none'; t.style.transform='translateY('+d+'px)'});
+  void tbody.offsetHeight;
+  vis.forEach(t=>{t.style.transition='transform .8s cubic-bezier(.2,.7,.2,1)'; t.style.transform=''});
+  await sleep(900);
+}
+
+/* animation for changes */
+async function animateChange(p){
+  const id=++runId; const alive=()=>id===runId;
+  const q=p.q, t=q.t;
+  till.hidden=true; $('#count').textContent='';
+  stage.innerHTML=plainTable(t,true);
+  const tb=stage.querySelector('tbody');
+  if(q.kind==='insert'){
+    buildSteps([['--chg','<span class="chip chg">INSERT INTO '+t+'</span> Open the '+t+' table'],['--sym','<span class="chip sym">VALUES</span> Check the new values'],['--ok','<span class="chip chg">add</span> Add the new row']]);
+    setStep(0,'active'); await sleep(500); if(!alive())return false; setStep(0,'done');
+    setStep(1,'done','<span class="chip sym">VALUES</span> '+q.cols.length+' value'+(q.cols.length===1?'':'s')+' for '+q.cols.length+' column'+(q.cols.length===1?'':'s')+'. Each id is new.'+(q.noCols?' (No column list, so every column in order.)':''));
+    await sleep(400); if(!alive())return false;
+    const n=applyPlan(p);
+    q.rows.forEach(r=>{ tb.insertAdjacentHTML('beforeend','<tr class="added pop"><td class="mark">+</td>'+TABLES[t].cols.map(c=>tdFor(t+'.'+c,r[c])).join('')+'</tr>'); });
+    setStep(2,'done','<span class="chip chg">added</span> '+n+' row'+(n===1?'':'s')+' added.');
+    $('#count').innerHTML='<span class="k-chg">'+n+' row'+(n===1?'':'s')+' inserted.</span>';
+    await sleep(600); return true;
+  }
+  const verb=q.kind==='update'?'change':'remove';
+  buildSteps([['--chg','<span class="chip chg">'+UP(q.kind)+' '+t+'</span> Open the '+t+' table'],['--where','<span class="chip where">WHERE</span> Find the rows to '+verb],[q.kind==='update'?'--agg':'--chg','<span class="chip chg">'+(q.kind==='update'?'SET':'DELETE')+'</span> '+(q.kind==='update'?'Change them':'Remove them')]]);
+  setStep(0,'active'); await sleep(500); if(!alive())return false; setStep(0,'done');
+  const trs=[...tb.children];
+  if(q.where){
+    setStep(1,'active','<span class="chip where">WHERE '+esc(q.whereSrc)+'</span> Testing each row…');
+    for(const tr of trs){ const i=+tr.dataset.i; tr.classList.add('checking'); await sleep(160); if(!alive())return false; tr.classList.remove('checking'); const hit=p.idx.includes(i); tr.classList.add(hit?'keep':'skip'); tr.querySelector('.mark').textContent=hit?'✓':'·'; }
+  } else trs.forEach(tr=>{ tr.classList.add('keep'); tr.querySelector('.mark').textContent='✓'; });
+  setStep(1,'done','<span class="chip where">'+(q.where?'WHERE '+esc(q.whereSrc):'no WHERE')+'</span> '+p.idx.length+' of '+trs.length+' rows found.');
+  await sleep(500); if(!alive())return false;
+  if(q.kind==='update'){
+    p.changes.forEach(c=>{ const tr=tb.children[c.i]; c.cells.forEach(x=>{ const td=tr.querySelector('[data-c="'+x.col+'"]'); td.classList.add('changed'); td.innerHTML='<s>'+esc(fmtKey(t+'.'+x.col,x.old))+'</s> '+esc(fmtKey(t+'.'+x.col,x.nu)); }); });
+    const n=applyPlan(p);
+    setStep(2,'done','<span class="chip chg">SET '+esc(q.assigns.map(a=>a.col+' = '+a.v.text).join(', '))+'</span> '+n+' row'+(n===1?'':'s')+' changed.');
+    $('#count').innerHTML='<span class="k-chg">'+n+' row'+(n===1?'':'s')+' updated.</span>';
+  } else {
+    p.idx.forEach(i=>{ const tr=tb.children[i]; tr.classList.add('removing'); tr.querySelector('.mark').textContent='−'; });
+    await sleep(900); if(!alive())return false;
+    p.idx.forEach(i=>{ tb.children[i].hidden=true; });
+    const n=applyPlan(p);
+    setStep(2,'done','<span class="chip chg">DELETE</span> '+n+' row'+(n===1?'':'s')+' removed.');
+    $('#count').innerHTML='<span class="k-chg">'+n+' row'+(n===1?'':'s')+' deleted.</span>';
+  }
+  await sleep(400); return true;
+}
+
+/* animation for SELECT (from Lesson 5) */
+async function animateSelect(q,res){
+  const id=++runId; const alive=()=>id===runId;
+  buildSteps(SELECT_STEPS);
+  const ds=res.ds, J=q.from.join, t1=q.from.tables[0];
+  tw.classList.remove('lit'); $('#count').textContent=''; till.hidden=true; tillLines.innerHTML='';
+  if(J){
+    stage.innerHTML='<div class="stagepair">'+card(t1,plainTable(t1,true,base(J.left)))+card(J.t2,plainTable(J.t2,true,base(J.right)))+'</div><div class="joinedlbl">Joined rows</div><div class="joinedbox"><table class="data" id="joined"><thead><tr>'+ds.cols.map(k=>'<th>'+esc(label(ds,k))+'</th>').join('')+'</tr></thead><tbody></tbody></table></div>';
+    await sleep(200); if(!alive())return false;
+    setStep(0,'active','<span class="chip from">'+(J.kind==='left'?'LEFT JOIN':'JOIN')+' '+J.t2+'</span> Looking up each '+t1+' row…');
+    const L=stage.querySelector('table[data-t="'+t1+'"] tbody'), R=stage.querySelector('table[data-t="'+J.t2+'"] tbody'), out=stage.querySelector('#joined tbody');
+    const byN={}; ds.rows.forEach(r=>byN[r.__id]=r);
+    for(const st of ds.trace){
+      const lt=L.children[st.li]; lt.classList.add('look'); st.ri.forEach(k=>R.children[k].classList.add('match'));
+      await sleep(Math.max(240,480-ds.rows.length*12)); if(!alive())return false;
+      if(st.ri.length) lt.querySelector('.mark').textContent='✓'; else { lt.classList.add('nomatch'); lt.querySelector('.mark').textContent=J.kind==='left'?'∅':'✗'; }
+      st.made.forEach(nid=>{ const r=byN[nid]; out.insertAdjacentHTML('beforeend','<tr class="pop">'+ds.cols.map(k=>tdFor(k,r[k])).join('')+'</tr>'); });
+      lt.classList.remove('look'); st.ri.forEach(k=>R.children[k].classList.remove('match'));
+    }
+    await sleep(600); if(!alive())return false;
+    setStep(0,'done','<span class="chip from">'+(J.kind==='left'?'LEFT JOIN':'JOIN')+' '+J.t2+'</span> '+ds.rows.length+' joined rows.');
+  } else { setStep(0,'active','<span class="chip from">FROM '+t1+'</span> Open the '+t1+' table.'); }
+  stage.innerHTML=fullTable(ds,ds.rows);
+  if(!J){ tw.classList.add('lit'); await sleep(600); if(!alive())return false; tw.classList.remove('lit'); setStep(0,'done','<span class="chip from">FROM '+t1+'</span> '+ds.rows.length+' rows.'); }
+  const trs=[...stage.querySelectorAll('tbody tr')]; const byId={}; trs.forEach(t=>byId[t.dataset.id]=t);
+  if(q.where){
+    setStep(1,'active','<span class="chip where">WHERE '+esc(q.whereSrc)+'</span> Testing each row…');
+    for(const tr of trs){ const row=ds.rows.find(r=>r.__id==tr.dataset.id); tr.classList.add('checking'); await sleep(150); if(!alive())return false; tr.classList.remove('checking'); const ok=passRow(row,q.where); tr.classList.add(ok?'keep':'drop'); tr.querySelector('.mark').textContent=ok?'✓':'✗'; }
+    await sleep(400); if(!alive())return false;
+    trs.forEach(tr=>{if(tr.classList.contains('drop'))tr.hidden=true});
+    setStep(1,'done','<span class="chip where">WHERE '+esc(q.whereSrc)+'</span> '+res.filtered.length+' of '+ds.rows.length+' rows passed.');
+  } else setStep(1,'done','<span class="chip where">no WHERE</span> All '+ds.rows.length+' rows stay.');
+  const tbody=stage.querySelector('tbody');
+  if(!q.isAgg){
+    const keep=q.star?ds.cols:q.items.map(i=>i.key);
+    setStep(2,'done','<span class="chip grp">no GROUP BY</span> No piles.');
+    setStep(3,'active','<span class="chip sel">SELECT</span> Pick the columns.');
+    stage.querySelectorAll('[data-col]').forEach(el=>{ if(keep.includes(el.dataset.col)){ if(el.tagName==='TH') el.classList.add('col-keep') } else el.classList.add('col-drop'); });
+    await sleep(600); if(!alive())return false;
+    setStep(3,'done'); setStep(4,'done','<span class="chip grp">no HAVING</span> No piles to check.');
+    if(q.order){ setStep(5,'active','<span class="chip ord">ORDER BY '+esc(q.orderSrc)+'</span> Lining the rows up…'); await flip(tbody,res.sorted.map(r=>byId[r.__id])); if(!alive())return false; res.sorted.forEach((r,i)=>{const m=byId[r.__id].querySelector('.mark'); m.textContent=i+1;}); setStep(5,'done','<span class="chip ord">ORDER BY '+esc(q.orderSrc)+'</span> The rows are in order.'); }
+    else setStep(5,'done','<span class="chip ord">no ORDER BY</span> Order is not guaranteed.');
+    if(q.limit!==null){ setStep(6,'active'); res.sorted.forEach((r,i)=>{const tr=byId[r.__id]; if(i>=q.limit){tr.classList.add('cut'); tr.querySelector('.mark').textContent='✗'}}); await sleep(800); if(!alive())return false; setStep(6,'done','<span class="chip lim">LIMIT '+q.limit+'</span> Kept the first '+q.limit+'.'); }
+    else setStep(6,'done','<span class="chip lim">no LIMIT</span> Every row that is left.');
+    await sleep(300); if(!alive())return false;
+    stage.innerHTML=finalTable(q,res);
+    $('#count').innerHTML='Answer: <span class="k-sel">'+res.final.length+' row'+(res.final.length===1?'':'s')+'</span>';
+    return true;
+  }
+  const vis=trs.filter(t=>!t.hidden);
+  if(q.group.length){
+    setStep(2,'active','<span class="chip grp">GROUP BY '+esc(q.group.map(base).join(', '))+'</span> Sliding rows into piles…');
+    stage.querySelectorAll('[data-col]').forEach(el=>{ if(q.group.includes(el.dataset.col)) el.classList.add('grpcol'); });
+    const order=[]; res.groups.forEach(g=>g.rows.forEach(r=>order.push(byId[r.__id]))); trs.filter(t=>t.hidden).forEach(t=>order.push(t));
+    await flip(tbody,order); if(!alive())return false;
+    res.groups.forEach((g,gi)=>g.rows.forEach((r,ri)=>{ const tr=byId[r.__id]; tr.classList.remove('keep'); tr.classList.add(gi%2?'pile1':'pile0'); if(ri===0&&gi>0) tr.classList.add('pilestart'); tr.querySelector('.mark').textContent=gi+1; }));
+    setStep(2,'done','<span class="chip grp">GROUP BY</span> '+res.groups.length+' pile'+(res.groups.length===1?'':'s')+'.');
+  } else { setStep(2,'done','<span class="chip grp">no GROUP BY</span> All rows make one big pile.'); vis.forEach(t=>{t.classList.remove('keep'); t.classList.add('pile0');}); }
+  setStep(3,'active','<span class="chip agg">squash</span> The till works through each pile…');
+  till.hidden=false;
+  for(const g of res.groups){
+    g.rows.forEach(r=>byId[r.__id].classList.add('counting'));
+    const parts=q.items.map((it,k)=>it.type==='col'?null:esc(it.label)+' = <b>'+esc(fmtItem(it,g.vals[k]))+'</b>').filter(Boolean);
+    tillLines.insertAdjacentHTML('beforeend','<div class="ln"><span class="pl">'+esc(groupName(g,q))+' ('+g.rows.length+')</span><span>'+(parts.join(', ')||'one row')+'</span></div>');
+    await sleep(Math.max(400,900-res.groups.length*90)); if(!alive())return false;
+    g.rows.forEach(r=>{byId[r.__id].classList.remove('counting'); byId[r.__id].classList.add('squashed');});
+  }
+  stage.innerHTML=groupTable(q,res.groups,true);
+  setStep(3,'done','<span class="chip agg">squashed</span> '+res.groups.length+' row'+(res.groups.length===1?'':'s')+'.');
+  const gtr={}; stage.querySelectorAll('tbody tr').forEach(t=>gtr[t.dataset.g]=t);
+  if(q.having){ for(const g of res.groups){ const tr=gtr[g.i]; tr.classList.add(g.pass?'keep':'drop'); tr.querySelector('.mark').textContent=g.pass?'✓':'✗'; } await sleep(700); if(!alive())return false; setStep(4,'done','<span class="chip grp">HAVING</span> '+res.kept.length+' of '+res.groups.length+' piles passed.'); }
+  else setStep(4,'done','<span class="chip grp">no HAVING</span> Every pile stays.');
+  setStep(5,'done',q.order?'<span class="chip ord">ORDER BY '+esc(q.orderSrc)+'</span> Piles in order.':'<span class="chip ord">no ORDER BY</span> Order of piles is not guaranteed.');
+  setStep(6,'done',q.limit!==null?'<span class="chip lim">LIMIT '+q.limit+'</span> Kept the first '+q.limit+'.':'<span class="chip lim">no LIMIT</span> Every pile that is left.');
+  await sleep(400); if(!alive())return false;
+  stage.innerHTML=finalTable(q,res);
+  $('#count').innerHTML='Answer: <span class="k-grp">'+res.final.length+' row'+(res.final.length===1?'':'s')+'</span>';
+  return true;
+}
+
+/* ---------- missions (checked against the tables after each change) ---------- */
+const lc=v=>String(v).toLowerCase();
+const findItem=name=>TABLES.menu.rows.find(r=>lc(r.item)===name);
+const MISSIONS=[
+  {title:'A new cake has arrived! Please add it to the menu: id 9, Lemon Tart, food, £3.20, 300 calories.',
+   hint:'Use INSERT INTO menu with all five columns, then VALUES in the same order. Text in quotes, and 3.2 for the price.',
+   answer:"INSERT INTO menu (id, item, type, price, calories) VALUES (9, 'Lemon Tart', 'food', 3.2, 300);",
+   test(){ const r=TABLES.menu.rows.find(x=>x.id===9); if(!r) return findItem('lemon tart')?'The Lemon Tart is there, but with a different id. Please use id 9.':null; const bad=[]; if(lc(r.item)!=='lemon tart') bad.push('item'); if(r.type!=='food') bad.push('type'); if(r.price!==3.2) bad.push('price'); if(r.calories!==300) bad.push('calories'); return bad.length?'Row 9 is there, but please check: '+bad.join(', ')+'. Press Reset tables and try again.':true; }},
+  {title:'The Cappuccino now costs £3.80. Please change its price, and nothing else.',
+   hint:'UPDATE menu SET price = 3.8, with a WHERE that only finds the Cappuccino.',
+   answer:"UPDATE menu SET price = 3.8 WHERE item = 'Cappuccino';",
+   test(){ const c=findItem('cappuccino'); if(!c) return 'The Cappuccino is missing. Please press Reset tables.'; const others=ORIG.menu.rows.filter(o=>o.id!==2).filter(o=>{ const now=TABLES.menu.rows.find(r=>r.id===o.id); return now && now.price!==o.price; }); if(c.price===3.8 && others.length) return 'Careful: '+others.map(o=>o.item).join(', ')+' changed too! Your WHERE found more than one row. Please press Reset tables and make your WHERE match only the Cappuccino.'; if(c.price===3.8) return true; return null; }},
+  {title:'Dev has just bought a Hot Chocolate. Please add the order: order id 8, customer Dev, item id 4.',
+   hint:'This is an INSERT into the orders table, with three columns: id, customer, item_id.',
+   answer:"INSERT INTO orders (id, customer, item_id) VALUES (8, 'Dev', 4);",
+   test(){ const o=TABLES.orders.rows.find(x=>x.id===8); if(!o) return null; return (lc(o.customer)==='dev'&&o.item_id===4)?true:'Order 8 is there, but please check the customer and item_id. Press Reset tables and try again.'; }},
+  {title:'The Fruit Cup isn\'t selling. Please take it off the menu, and nothing else.',
+   hint:'Look first with SELECT * FROM menu WHERE item = \'Fruit Cup\', then swap SELECT * for DELETE.',
+   answer:"DELETE FROM menu WHERE item = 'Fruit Cup';",
+   test(){ const gone=!findItem('fruit cup'); const lost=ORIG.menu.rows.filter(o=>o.id!==8 && !TABLES.menu.rows.some(r=>r.id===o.id)); if(gone && lost.length) return 'Careful: '+lost.map(o=>o.item).join(', ')+' disappeared too! Please press Reset tables and use a WHERE that only finds the Fruit Cup.'; return gone?true:null; }}
+];
+let cur=0; const won=new Set();
+try{ JSON.parse(localStorage.getItem('sqlcafe6-won')||'[]').forEach(i=>won.add(i)) }catch(e){}
+function saveWon(){ try{ localStorage.setItem('sqlcafe6-won',JSON.stringify([...won])) }catch(e){} }
+function drawMission(){
+  const m=MISSIONS[cur];
+  $('#m-title').textContent=m.title;
+  $('#m-hint').hidden=true; $('#m-hint').textContent='';
+  $('#dots').innerHTML=MISSIONS.map((_,i)=>'<button type="button" aria-label="Mission '+(i+1)+(won.has(i)?' (done)':'')+'" class="'+(i===cur?'cur ':'')+(won.has(i)?'won':'')+'" data-i="'+i+'">'+(won.has(i)?'✓':i+1)+'</button>').join('');
+}
+$('#dots').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cur=+b.dataset.i;drawMission();$('#msg').innerHTML=''});
+$('#m-hint-btn').onclick=()=>{const h=$('#m-hint');h.hidden=false;h.textContent='Hint: '+MISSIONS[cur].hint};
+$('#m-ans-btn').onclick=()=>{const h=$('#m-hint');h.hidden=false;h.innerHTML='Answer: <code>'+esc(MISSIONS[cur].answer)+'</code>. Please type it in yourself, as typing helps you remember.'};
+function check(kind){
+  const m=MISSIONS[cur], r=m.test(), say=h=>$('#msg').innerHTML=h;
+  if(r===true && won.has(cur)) return;
+  if(r===true){
+    won.add(cur); saveWon();
+    const next=MISSIONS.map((_,k)=>(cur+1+k)%MISSIONS.length).find(i=>!won.has(i)) ?? -1;
+    say('<div class="msg win">Mission '+(cur+1)+' done! '+(next<0?'You finished all four. Well done!':'On to the next one.')+'</div>');
+    if(next>=0) cur=next; drawMission(); return;
+  }
+  if(typeof r==='string'){ say('<div class="msg near">'+esc(r)+'</div>'); return; }
+  if(kind!=='select') say('<div class="msg done">Done. That changed the table, but this mission isn\'t finished yet. Would a hint help?</div>');
+}
+
+/* ---------- wiring ---------- */
+const ta=$('#sql');
+async function run(slow,confirmed){
+  speed=slow?1.8:1;
+  let q, p;
+  try{ q=parse(ta.value); if(q.kind!=='select') p=plan(q); }
+  catch(e){ runId++; $('#count').textContent=''; $('#msg').innerHTML='<div class="msg err">'+esc(e.message)+'</div>'; return }
+  $('#english').innerHTML=english(q);
+  if(q.kind!=='select' && q.kind!=='insert' && !q.where && !confirmed){
+    const n=TABLES[q.t].rows.length;
+    $('#msg').innerHTML='<div class="msg warn"><span>This '+UP(q.kind)+' has no WHERE, so it will '+(q.kind==='update'?'change':'remove')+' all '+n+' rows of '+q.t+'. In a real database there is usually no Undo. Run it anyway?</span><span class="row"><button class="btn danger small" type="button" id="yes-all">Yes, '+(q.kind==='update'?'change':'remove')+' all '+n+' rows</button><button class="btn ghost small" type="button" id="no-all">No, let me add a WHERE</button></span></div>';
+    $('#yes-all').onclick=()=>run(slow,true);
+    $('#no-all').onclick=()=>{ $('#msg').innerHTML='<div class="msg done">Good choice. Please add a WHERE to choose the rows.</div>'; ta.focus(); };
+    return;
+  }
+  $('#msg').innerHTML='';
+  const my=runId+1;
+  let ok;
+  if(q.kind==='select'){ ok=await animateSelect(q,execute(q)); }
+  else { ok=await animateChange(p); drawLive(); }
+  if(ok && !slow && runId===my) check(q.kind);
+}
+$('#run').onclick=()=>run(false);
+$('#replay').onclick=()=>run(true);
+$('#reset').onclick=()=>{ runId++; TABLES=clone(ORIG); drawLive(); buildSteps([['--sel','Press <b>Run</b> and each step of your statement appears here.']]); stage.innerHTML=plainTable('menu',false); $('#count').textContent=''; till.hidden=true; $('#msg').innerHTML='<div class="msg done">The tables are back to how they started.</div>'; };
+ta.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();run(false)}});
+ta.addEventListener('input',()=>{try{$('#english').innerHTML=english(parse(ta.value))}catch(e){}});
+const EX=["SELECT * FROM menu;","INSERT INTO menu (id, item, type, price, calories) VALUES (9, 'Lemon Tart', 'food', 3.2, 300);","UPDATE menu SET price = price + 0.2 WHERE type = 'drink';","SELECT * FROM menu WHERE item = 'Fruit Cup';","DELETE FROM menu WHERE item = 'Fruit Cup';","DELETE FROM menu WHERE item = 'Cappuccino';","INSERT INTO orders (id, customer, item_id) VALUES (8, 'Dev', 12);"];
+$('#examples').innerHTML=EX.map(x=>'<button type="button">'+esc(x)+'</button>').join('');
+$('#examples').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ta.value=b.textContent;run(false)});
+buildSteps([['--sel','Press <b>Run</b> and each step of your statement appears here.']]); stage.innerHTML=plainTable('menu',false); drawLive(); drawMission();
+try{ $('#english').innerHTML=english(parse(ta.value)); }catch(e){}
+
+/* ---------- word-by-word reader ---------- */
+const READ=[
+  {t:'UPDATE',c:'chg',kind:'New main word',what:'Means “please change”. It changes rows that are already there.',tip:'Amber in the playground: change with care.',say:'Please change'},
+  {t:'menu',c:'name',kind:'Table name',what:'The table to change.',tip:'',say:'the menu:'},
+  {t:'SET',c:'chg',kind:'New main word',what:'Starts the list of changes: which column gets which new value.',tip:'',say:'set'},
+  {t:'price',c:'name',kind:'Column name',what:'The column that will get a new value.',tip:'',say:'the price'},
+  {t:'=',c:'sym',kind:'Equals, in SET',what:'In SET, = means “change it to”.',tip:'Watch out: later the same symbol means something else.',say:'to'},
+  {t:'3.8',c:'name',kind:'A number',what:'The new price, £3.80, written without the £ sign.',tip:'Numbers have no quotes.',say:'£3.80,'},
+  {t:'WHERE',c:'where',kind:'Main word',what:'Chooses which rows change. Leave it out and every row changes!',tip:'Your safety belt.',say:'but only where'},
+  {t:'item',c:'name',kind:'Column name',what:'The column we test.',tip:'',say:'the item'},
+  {t:'=',c:'sym',kind:'Equals, in WHERE',what:'In WHERE, = means “is”: it is a test, not a change.',tip:'Same symbol, two jobs.',say:'is'},
+  {t:"'Cappuccino'",c:'name',kind:'Text',what:'The item we look for, in quotes because it is text.',tip:'',say:'“Cappuccino”'},
+  {t:';',j:1,c:'sym',kind:'Semicolon',what:'The full stop. “My statement is finished.”',tip:'',say:'. Done!'}
+];
+let rStep=0;
+const bigq=$('#bigq');
+bigq.innerHTML=READ.map((r,i)=>'<button type="button" class="tok t-'+r.c+(r.j?' join':'')+'" data-i="'+i+'" aria-label="'+esc(r.kind+': '+r.t)+'">'+esc(r.t)+'</button>').join('');
+const toks=[...bigq.querySelectorAll('.tok')];
+function drawReader(){
+  const r=READ[rStep];
+  toks.forEach((el,i)=>{el.classList.toggle('seen',i<=rStep);el.classList.toggle('on',i===rStep)});
+  $('#r-kind').textContent=r.kind;
+  const big=$('#r-big'); big.textContent=r.t; big.className='big k-'+r.c;
+  $('#r-what').textContent=r.what; $('#r-tip').textContent=r.tip;
+  let s='', first=true;
+  READ.slice(0,rStep+1).forEach((x,i)=>{ const w=esc(x.say); const sep=(first||/^[.,]/.test(x.say))?'':' '; first=false; s+=sep+(i===rStep?'<span class="new">'+w+'</span>':w); });
+  $('#r-say').innerHTML='“'+s.trim()+(rStep===READ.length-1?'':' …')+'”';
+  $('#r-prog').textContent='Piece '+(rStep+1)+' of '+READ.length;
+  $('#r-back').disabled=rStep===0;
+  $('#r-next').textContent=rStep===READ.length-1?'Start again ↺':'Next ▶';
+}
+$('#r-next').onclick=()=>{rStep=rStep===READ.length-1?0:rStep+1;drawReader()};
+$('#r-back').onclick=()=>{if(rStep>0){rStep--;drawReader()}};
+bigq.addEventListener('click',e=>{const b=e.target.closest('.tok');if(!b)return;rStep=+b.dataset.i;drawReader()});
+drawReader();
+
+/* ---------- quiz ---------- */
+const QUIZ=[
+  {p:'Which word adds a brand new row?',o:['UPDATE','DELETE','INSERT'],a:2,why:'INSERT adds. UPDATE changes rows that are already there, and DELETE removes them.'},
+  {p:'What happens with UPDATE menu SET price = 1 (no WHERE)?',o:['Every item on the menu now costs £1.00','Only the first row changes','You get an error'],a:0,why:'No WHERE means every row. That is why WHERE is your safety belt.'},
+  {p:'In UPDATE menu SET price = 3.8 WHERE item = \'Cappuccino\', what does the first = mean?',o:['“is”, a test','“change it to”','“plus”'],a:1,why:'In SET, = means “change it to”. In WHERE, = means “is”.'},
+  {p:'What is the safest habit before a DELETE?',o:['Delete first, check later','Run SELECT * with the same WHERE to see which rows it finds','Always use LIMIT 1'],a:1,why:'Look before you change: the same WHERE finds the same rows.'},
+  {p:'Which INSERT is correct?',o:["INSERT INTO menu (id, item) VALUES (9)","INSERT menu VALUES (9, 'Muffin')","INSERT INTO menu (id, item) VALUES (9, 'Muffin')"],a:2,mono:1,why:'INSERT INTO, then two lists of the same length: 2 columns, 2 values.'}
+];
+let right=0, answered=0;
+$('#quiz').innerHTML=QUIZ.map((q,i)=>'<div class="qz" data-q="'+i+'"><span class="eyebrow">Question '+(i+1)+'</span><span class="prompt">'+esc(q.p)+'</span><div class="opts">'+q.o.map((o,j)=>'<button type="button" class="'+(q.mono?'mono':'')+'" data-j="'+j+'">'+esc(o)+'</button>').join('')+'</div><p class="why" hidden></p></div>').join('');
+$('#quiz').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b||b.disabled)return;
+  const box=b.closest('.qz'), q=QUIZ[+box.dataset.q], j=+b.dataset.j;
+  box.querySelectorAll('button').forEach((x,k)=>{x.disabled=true; if(k===q.a)x.classList.add('right')});
+  if(j!==q.a)b.classList.add('wrong'); else right++;
+  answered++;
+  const w=box.querySelector('.why'); w.hidden=false; w.textContent=(j===q.a?'Yes! ':'Not this time. ')+q.why;
+  if(answered===QUIZ.length) $('#score').textContent='You got '+right+' of '+QUIZ.length+'. '+(right===QUIZ.length?'Perfect. You know Lesson 6.':'Please come back tomorrow and try again. Each try makes it stick.');
+});
+})();
+</script>
+
+</body>
+</html>

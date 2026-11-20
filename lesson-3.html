@@ -1,0 +1,932 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="SQL Cafe Lesson 3: COUNT, SUM, AVG, MIN and MAX as the receipt words.">
+<link rel="canonical" href="https://learn.masshai.com/lesson-3.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%234263EB%27/%3E%3Cpath d=%27M16 24h26v14a10 10 0 0 1-10 10h-6a10 10 0 0 1-10-10z%27 fill=%27white%27/%3E%3Cpath d=%27M42 28h4a5 5 0 0 1 0 10h-4%27 stroke=%27white%27 stroke-width=%274%27 fill=%27none%27/%3E%3C/svg%3E">
+<style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}.topnav{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:.9rem;font-weight:700;margin-bottom:-40px}.topnav a{color:var(--sel);text-decoration:none}.topnav a:hover{text-decoration:underline}.topnav .mid{color:var(--muted)}.madeby{margin-top:-40px;padding-top:18px;border-top:1px dashed var(--line);color:var(--muted);font-size:.9rem;max-width:none}.madeby a{color:var(--sel)}</style>
+<title>SQL Café Lesson 3</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: same reading column as Lessons 1 and 2. Every keyword keeps its colour; today's "receipt words" (COUNT, SUM, AVG, MIN, MAX) share one new colour, gold, because they all do the same job: squash many rows into one answer. */
+:root{
+  --bg:#F3F6FC; --surface:#FFFFFF; --ink:#1A2340; --muted:#56617F; --line:#DCE3F0; --band:#E6ECFA;
+  --sel:#4263EB; --sel-soft:#E5EAFF;
+  --from:#E07A00; --from-soft:#FFF0DC;
+  --where:#D6336C; --where-soft:#FFE3EC;
+  --ord:#0C8599; --ord-soft:#DDF6FA;
+  --lim:#5C940D; --lim-soft:#EBF7D6;
+  --agg:#A16207; --agg-soft:#FEF3C7;
+  --sym:#7048E8; --sym-soft:#EFE9FF;
+  --ok:#0B8A64; --ok-soft:#DCF5EC; --bad:#C92A2A; --bad-soft:#FFE3E3;
+  --paper:#FFFDF7;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10142A; --surface:#181E3A; --ink:#E8ECFA; --muted:#A0A9C9; --line:#2A3358; --band:#1C2448;
+  --sel:#8DA2FF; --sel-soft:#232E63; --from:#FFB04D; --from-soft:#3D2A10;
+  --where:#FF7BA6; --where-soft:#45182B; --ord:#3BC9DB; --ord-soft:#0F3A42; --lim:#A9E34B; --lim-soft:#2A3A12;
+  --agg:#FCC419; --agg-soft:#3B3010; --sym:#B39CFF; --sym-soft:#2D2360;
+  --ok:#4FD6A5; --ok-soft:#123A30; --bad:#FF8787; --bad-soft:#451C1C; --paper:#1F2547;
+  color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#10142A; --surface:#181E3A; --ink:#E8ECFA; --muted:#A0A9C9; --line:#2A3358; --band:#1C2448;
+  --sel:#8DA2FF; --sel-soft:#232E63; --from:#FFB04D; --from-soft:#3D2A10;
+  --where:#FF7BA6; --where-soft:#45182B; --ord:#3BC9DB; --ord-soft:#0F3A42; --lim:#A9E34B; --lim-soft:#2A3A12;
+  --agg:#FCC419; --agg-soft:#3B3010; --sym:#B39CFF; --sym-soft:#2D2360;
+  --ok:#4FD6A5; --ok-soft:#123A30; --bad:#FF8787; --bad-soft:#451C1C; --paper:#1F2547;
+  color-scheme:dark }
+
+*{box-sizing:border-box;font-variant-ligatures:none}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:40px 80px;display:flex;flex-direction:column;gap:72px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:clamp(2.2rem,6vw,3.6rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(1.6rem,4vw,2.2rem);font-weight:800}
+h3{font-size:1.25rem;font-weight:600}
+p{margin:0;max-width:65ch}
+a{color:var(--sel)}
+.eyebrow{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:20px}
+code,.mono{font-family:var(--mono)}
+.k-sel{color:var(--sel);font-weight:700}
+.k-from{color:var(--from);font-weight:700}
+.k-where{color:var(--where);font-weight:700}
+.k-ord{color:var(--ord);font-weight:700}
+.k-lim{color:var(--lim);font-weight:700}
+.k-agg{color:var(--agg);font-weight:700}
+.k-sym{color:var(--sym);font-weight:700}
+.chip{display:inline-block;font-family:var(--mono);font-weight:600;font-size:.82rem;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.chip.sel{background:var(--sel-soft);color:var(--sel)}
+.chip.from{background:var(--from-soft);color:var(--from)}
+.chip.where{background:var(--where-soft);color:var(--where)}
+.chip.ord{background:var(--ord-soft);color:var(--ord)}
+.chip.lim{background:var(--lim-soft);color:var(--lim)}
+.chip.agg{background:var(--agg-soft);color:var(--agg)}
+.chip.sym{background:var(--sym-soft);color:var(--sym)}
+
+/* hero */
+.hero{display:flex;flex-direction:column;gap:22px;background:var(--band);border-radius:24px;padding:clamp(20px,4vw,40px)}
+.recap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.92rem;color:var(--muted)}
+.order{display:flex;flex-direction:column;gap:14px;margin-top:6px}
+.bubble{background:var(--surface);border:1px solid var(--line);border-radius:18px 18px 18px 4px;padding:18px 22px;font-size:clamp(1.1rem,2.6vw,1.4rem);max-width:720px;line-height:1.7}
+.bubble small{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.u{border-bottom:3px solid;padding-bottom:1px}
+.u.agg{border-color:var(--agg)} .u.from{border-color:var(--from)} .u.where{border-color:var(--where)}
+.arrow{font-family:var(--mono);color:var(--muted);padding-left:22px}
+.sqlline{font-family:var(--mono);font-size:clamp(.95rem,2.3vw,1.2rem);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 22px;max-width:720px;line-height:1.7}
+
+/* receipt */
+.receipt-row{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:28px;align-items:center}
+@media (max-width:760px){.receipt-row{grid-template-columns:1fr}}
+.receipt{background:var(--paper);color:var(--ink);font-family:var(--mono);font-size:.92rem;padding:22px 22px 26px;border-radius:6px;box-shadow:0 1px 0 var(--line),0 10px 30px rgba(26,35,64,.10);display:flex;flex-direction:column;gap:4px;max-width:340px;width:100%;
+  -webkit-mask:radial-gradient(circle 7px at 50% 100%,transparent 6.5px,#000 7px) 0 0/16px 100% repeat-x;mask:radial-gradient(circle 7px at 50% 100%,transparent 6.5px,#000 7px) 0 0/16px 100% repeat-x}
+.receipt .shop{text-align:center;font-weight:600;letter-spacing:.2em;margin-bottom:6px}
+.receipt .ln{display:flex;justify-content:space-between;gap:10px;font-variant-numeric:tabular-nums}
+.receipt hr{border:none;border-top:2px dashed var(--line);margin:8px 0;width:100%}
+.receipt .tot{font-weight:600}
+.receipt .tag{font-size:.72rem;padding:1px 6px;border-radius:5px;background:var(--agg-soft);color:var(--agg);font-weight:600;margin-left:6px}
+.receipt-words{display:flex;flex-direction:column;gap:12px}
+.rw{display:grid;grid-template-columns:76px minmax(0,1fr);gap:12px;align-items:baseline}
+.rw code{font-weight:600;color:var(--agg);font-size:1.15rem}
+.rw b{font-family:var(--display);font-size:1.1rem}
+
+/* squash idea */
+.squash{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:18px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px}
+@media (max-width:640px){.squash{grid-template-columns:1fr;text-align:center}.squash .big-arrow{transform:rotate(90deg)}}
+.tok.join{margin-left:-11px}
+.stack{display:flex;flex-direction:column;gap:5px;align-items:center}
+.stack i{display:block;width:150px;height:14px;border-radius:4px;background:var(--agg);opacity:.55}
+.one{display:flex;flex-direction:column;align-items:center;gap:6px}
+.one i{display:block;width:150px;height:30px;border-radius:6px;background:var(--agg)}
+.squash .big-arrow{font-family:var(--display);font-weight:800;font-size:2rem;color:var(--agg)}
+.squash .cap{font-size:.9rem;color:var(--muted);text-align:center}
+.fact{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+.fact b{font-family:var(--display)}
+.brackets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:720px){.brackets{grid-template-columns:1fr}}
+.bk{background:var(--agg-soft);border:2px solid var(--agg);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:6px}
+.bk code{font-size:1.3rem;font-weight:600}
+.bk .say{font-weight:700;font-size:1.05rem}
+.bk .res{font-size:.9rem;color:var(--muted)}
+
+/* reader */
+.reader{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:clamp(18px,3vw,28px);display:flex;flex-direction:column;gap:18px}
+.bigq{font-family:var(--mono);font-size:clamp(1.05rem,3.2vw,1.6rem);display:flex;flex-wrap:wrap;gap:6px 2px;align-items:baseline;line-height:1.5}
+.tok{padding:2px 5px;border-radius:8px;cursor:pointer;border:2px solid transparent;background:none;font:inherit;color:inherit;opacity:.3;transition:opacity .25s,background .25s,border-color .25s}
+.tok.seen{opacity:1}
+.tok.on{opacity:1;border-color:currentColor;background:var(--ts)}
+.tok.t-sel{color:var(--sel);--ts:var(--sel-soft);font-weight:600}
+.tok.t-from{color:var(--from);--ts:var(--from-soft);font-weight:600}
+.tok.t-where{color:var(--where);--ts:var(--where-soft);font-weight:600}
+.tok.t-agg{color:var(--agg);--ts:var(--agg-soft);font-weight:600}
+.tok.t-sym{color:var(--sym);--ts:var(--sym-soft);font-weight:600}
+.tok.t-name{color:var(--ink);--ts:var(--band)}
+.explain{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:700px){.explain{grid-template-columns:1fr}}
+.ebox{background:var(--bg);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.ebox .big{font-family:var(--mono);font-size:1.6rem;font-weight:600}
+.ebox .kind{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:var(--muted)}
+.ebox .tip{font-size:.92rem;color:var(--muted)}
+.sayit{font-size:clamp(1.05rem,2.6vw,1.3rem);font-weight:700;line-height:1.4}
+.sayit .new{background:var(--sym-soft);color:var(--sym);border-radius:6px;padding:0 4px}
+.reader .nav{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.progress{font-size:.85rem;color:var(--muted);margin-left:auto}
+
+/* symbol table */
+.symwrap{overflow-x:auto;border-radius:16px;border:1px solid var(--line);background:var(--surface)}
+table.sym{border-collapse:collapse;width:100%;min-width:620px}
+.sym th,.sym td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;font-size:.95rem}
+.sym th{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);background:var(--band)}
+.sym td:first-child{font-family:var(--mono);font-weight:700;font-size:1.15rem;white-space:nowrap}
+.sym td.say{font-weight:700;min-width:150px}
+.sym td code{font-size:.88rem;background:var(--bg);padding:2px 6px;border-radius:6px;white-space:nowrap}
+.sym tr.grp td{background:var(--bg);font-family:var(--body);font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;padding:8px 14px}
+@media (max-width:640px){
+  .symwrap table.sym{min-width:0}
+  .sym thead{display:none}
+  table.sym,.sym tbody{display:block}
+  .sym tr{display:flex;flex-wrap:wrap;gap:6px 14px;padding:14px 16px;border-bottom:1px solid var(--line);align-items:baseline}
+  .sym td{display:block;border:none !important;padding:0 !important;min-width:0 !important}
+  .sym td:nth-child(3),.sym td:nth-child(4){flex:1 1 100%}
+  .sym td code{white-space:normal}
+  .sym tr.grp{display:block;padding:0;border-bottom:1px solid var(--line)}
+  .sym tr.grp td{display:block;padding:8px 16px !important}
+}
+.tipbox{background:var(--sym-soft);color:var(--ink);border-radius:14px;padding:14px 18px;font-size:.95rem}
+
+/* playground */
+.play{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px;align-items:start}
+@media (max-width:860px){.play{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.mission{background:var(--bg);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.mission-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.dots{display:flex;gap:6px}
+.dots button{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);background:var(--surface);color:var(--muted);font:700 .75rem var(--body);cursor:pointer;padding:0}
+.dots button.cur{border-color:var(--ink);color:var(--ink)}
+.dots button.won{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.mission h3{font-size:1.1rem}
+.linkbtn{background:none;border:none;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:.88rem}
+.hint{font-size:.9rem;color:var(--muted)}
+textarea{width:100%;min-height:120px;resize:vertical;font-family:var(--mono);font-size:15px;line-height:1.5;padding:12px 14px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
+textarea:focus{outline:none;border-color:var(--sel)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font:700 1rem var(--body);padding:10px 20px;border-radius:10px;border:none;background:var(--ink);color:var(--bg);cursor:pointer}
+.btn:hover{opacity:.88}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
+.kbd{font-size:.8rem;color:var(--muted)}
+.examples{display:flex;flex-wrap:wrap;gap:6px}
+.examples button{font-family:var(--mono);font-size:.78rem;padding:5px 9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;text-align:left}
+.examples button:hover{border-color:var(--ink)}
+.english{font-size:1rem;background:var(--bg);border-radius:10px;padding:10px 14px}
+.english .lbl{display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.msg{border-radius:10px;padding:10px 14px;font-weight:700;font-size:.95rem}
+.msg.err{background:var(--bad-soft);color:var(--bad)}
+.msg.win{background:var(--ok-soft);color:var(--ok)}
+.msg.near{background:var(--from-soft);color:var(--from)}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.steps li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:10px;align-items:start;padding:8px 12px;border-radius:10px;border:2px solid transparent;background:var(--bg);opacity:.5;transition:opacity .3s,border-color .3s}
+.steps li .n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.78rem;background:var(--line);color:var(--ink)}
+.steps li.active{opacity:1;border-color:var(--c)}
+.steps li.done{opacity:1}
+.steps li.done .n{background:var(--c);color:var(--surface)}
+.steps li .t{font-size:.9rem}
+.tablewrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line);transition:box-shadow .4s,border-color .4s}
+.tablewrap.lit{border-color:var(--from);box-shadow:0 0 0 4px var(--from-soft)}
+table.data{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:.88rem;font-variant-numeric:tabular-nums}
+.data tr{position:relative;transition:opacity .5s}
+.data th,.data td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;transition:opacity .4s,background .25s,color .3s;background:var(--surface)}
+.data th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.data td.num{text-align:right}
+.data td.mark,.data th.mark{width:34px;text-align:center;padding:8px 4px;font-weight:700}
+.data tr.checking td{background:var(--where-soft)}
+.data tr.keep td.mark{color:var(--ok)}
+.data tr.drop td{opacity:.28;text-decoration:line-through}
+.data tr.drop td.mark{color:var(--bad);opacity:1;text-decoration:none}
+.data .col-drop{opacity:.18}
+.data th.col-keep{background:var(--sel-soft);color:var(--sel)}
+.data .aggcol{background:var(--agg-soft) !important;color:var(--agg);opacity:1 !important}
+.data tr.counting td{background:var(--agg-soft)}
+.data tr.counting td.mark,.data td.mark.counted{color:var(--agg)}
+.data tr.squashed{opacity:.15}
+.data .sortcol{background:var(--ord-soft) !important;color:var(--ord);opacity:1 !important}
+.data td.rank{color:var(--ord)}
+.data tr.cut td{opacity:.25;text-decoration:line-through}
+.data tr.cut td.mark{color:var(--bad);opacity:1;text-decoration:none}
+.data tr.kept td.mark{color:var(--lim)}
+.data.result th{background:var(--sel-soft);color:var(--sel)}
+.data.result th.agg{background:var(--agg-soft);color:var(--agg)}
+.data.result tr{animation:pop .35s ease both}
+.data.result.one td{font-size:1.15rem;font-weight:600}
+@keyframes pop{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.till{font-family:var(--mono);font-size:.9rem;background:var(--paper);border:2px dashed var(--agg);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:4px;font-variant-numeric:tabular-nums}
+.till .lbl{font-family:var(--body);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--agg)}
+.till .ln{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.till .ln b{color:var(--agg)}
+.count{font-weight:700;font-size:.95rem}
+.order-note{font-size:.85rem;color:var(--muted)}
+
+/* quiz */
+.quiz{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.quiz{grid-template-columns:1fr}}
+.qz{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.qz:last-child:nth-child(odd){grid-column:1/-1}
+.qz .prompt{font-weight:700}
+.qz .opts{display:flex;flex-direction:column;gap:8px}
+.qz .opts button{text-align:left;font:inherit;font-size:.95rem;padding:10px 14px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.qz .opts button.mono{font-family:var(--mono);font-size:.85rem}
+.qz .opts button:hover:not(:disabled){border-color:var(--ink)}
+.qz .opts button.right{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.qz .opts button.wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.qz .why{font-size:.92rem;color:var(--muted)}
+.score{font-family:var(--display);font-weight:800;font-size:1.2rem}
+
+/* pocket */
+.pocket{background:var(--surface);border:2px solid var(--ink);border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:14px;max-width:680px}
+.pocket .line{display:grid;grid-template-columns:130px minmax(0,1fr);gap:12px;align-items:baseline;font-size:1.05rem}
+.pocket .line code{font-weight:600;font-size:1.05rem}
+.pocket hr{border:none;border-top:1px dashed var(--line);margin:0;width:100%}
+.pocket ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+footer{color:var(--muted);font-size:.9rem}
+@media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+</style>
+
+</head>
+<body>
+<main class="wrap">
+  <nav class="topnav" aria-label="Lessons"><a href="lesson-2.html">&larr; Lesson 2</a><a class="mid" href="index.html">All lessons</a><a href="lesson-4.html">Lesson 4 &rarr;</a></nav>
+
+
+  <header class="hero">
+    <span class="eyebrow">SQL Café · Lesson 3 of 8</span>
+    <h1>Please add it all up for me.</h1>
+    <div class="recap">So far: <span class="chip sel">SELECT</span><span class="chip from">FROM</span><span class="chip where">WHERE</span><span class="chip ord">ORDER BY</span><span class="chip lim">LIMIT</span> <a href="lesson-1.html">Lesson 1</a> · <a href="lesson-2.html">Lesson 2</a></div>
+    <p>Until now, every answer was a list of rows. Today you ask for a <b>summary</b> instead: how many, what is the total, what is the average. You already know these ideas from a café receipt.</p>
+    <div class="order">
+      <div class="bubble"><small>You say to the waiter</small>
+        “Please could you tell me <span class="u agg">how many drinks are on the menu</span>, <span class="u agg">what they cost altogether</span> and <span class="u agg">the average price</span>? Thank you!”
+      </div>
+      <div class="arrow">↓ same thing in SQL</div>
+      <div class="sqlline"><span class="k-sel">SELECT</span> <span class="k-agg">COUNT</span>(*), <span class="k-agg">SUM</span>(price), <span class="k-agg">AVG</span>(price) <span class="k-from">FROM</span> menu <span class="k-where">WHERE</span> type = 'drink';</div>
+    </div>
+  </header>
+
+  <section aria-labelledby="h-receipt">
+    <span class="eyebrow">The one thing to remember</span>
+    <h2 id="h-receipt">The receipt words</h2>
+    <p>A café receipt already ends with how many items you bought and the total. Our receipt adds three more lines at the bottom. Those five lines are today's five new SQL words. Here is the receipt for one of each drink on our menu.</p>
+    <div class="receipt-row">
+      <div class="receipt" aria-label="Example receipt">
+        <div class="shop">SQL CAFÉ</div>
+        <div class="ln"><span>Espresso</span><span>£2.50</span></div>
+        <div class="ln"><span>Cappuccino</span><span>£3.50</span></div>
+        <div class="ln"><span>Iced Latte</span><span>£4.50</span></div>
+        <div class="ln"><span>Hot Chocolate</span><span>£4.00</span></div>
+        <hr>
+        <div class="ln tot"><span>Items<span class="tag">COUNT</span></span><span>4</span></div>
+        <div class="ln tot"><span>Total<span class="tag">SUM</span></span><span>£14.50</span></div>
+        <div class="ln tot"><span>Average<span class="tag">AVG</span></span><span>£3.63</span></div>
+        <div class="ln tot"><span>Cheapest<span class="tag">MIN</span></span><span>£2.50</span></div>
+        <div class="ln tot"><span>Most expensive<span class="tag">MAX</span></span><span>£4.50</span></div>
+      </div>
+      <div class="receipt-words">
+        <div class="rw"><code>COUNT</code><span><b>How many?</b> Counts the rows.</span></div>
+        <div class="rw"><code>SUM</code><span><b>What is the total?</b> Adds up a number column.</span></div>
+        <div class="rw"><code>AVG</code><span><b>What is the average?</b> The total shared out equally: £14.50 ÷ 4 = £3.625, which rounds to £3.63.</span></div>
+        <div class="rw"><code>MIN</code><span><b>What is the smallest?</b> The cheapest, the lowest.</span></div>
+        <div class="rw"><code>MAX</code><span><b>What is the biggest?</b> The most expensive, the highest.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-squash">
+    <span class="eyebrow">What they all do</span>
+    <h2 id="h-squash">Many rows in, one row out</h2>
+    <p>All five receipt words work the same way. They take all the rows that are left and squash them into one row. Remember this little picture:</p>
+    <div class="squash">
+      <div class="stack" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span class="cap">8 rows go in</span></div>
+      <div class="big-arrow" aria-hidden="true">→</div>
+      <div class="one" aria-hidden="true"><i></i><span class="cap">1 row comes out</span></div>
+    </div>
+    <div class="fact">
+      <div><b>WHERE still works first.</b> The database throws away rows with WHERE, and only then squashes what is left. So <code>WHERE type = 'drink'</code> followed by COUNT counts only the drinks.</div>
+      <div><b>One thing you can't do yet:</b> <code>SELECT item, COUNT(*)</code>. COUNT squashes 8 rows into 1, so which item name should that one row show? There is no right answer, so most databases give you an error. (A few let it through and show any item at all, which is even more confusing.) Lesson 4 (GROUP BY) shows how to do it properly.</div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-brackets">
+    <span class="eyebrow">The new symbols</span>
+    <h2 id="h-brackets">Brackets mean “of”</h2>
+    <p>Each receipt word needs to know what to work on. You put that inside round brackets, straight after the word. When you read it out loud, say the brackets as <b>“of”</b>.</p>
+    <div class="brackets">
+      <div class="bk"><code><span class="k-agg">COUNT</span><span class="k-sym">(</span>*<span class="k-sym">)</span></code><span class="say">“the count of every row”</span><span class="res">The star inside means “rows, whatever is in them”. Gives 8.</span></div>
+      <div class="bk"><code><span class="k-agg">SUM</span><span class="k-sym">(</span>price<span class="k-sym">)</span></code><span class="say">“the sum of price”</span><span class="res">Adds every price together. Gives £30.50.</span></div>
+      <div class="bk"><code><span class="k-agg">AVG</span><span class="k-sym">(</span>calories<span class="k-sym">)</span></code><span class="say">“the average of calories”</span><span class="res">Total calories ÷ number of rows: 1645 ÷ 8. Gives 205.625.</span></div>
+    </div>
+    <div class="tipbox"><b>Words or numbers?</b> SUM and AVG need a <b>number</b> column (price or calories), because you can't add up words. COUNT, MIN and MAX work on anything: MIN(item) gives the name that comes first from A to Z.</div>
+  </section>
+
+  <section aria-labelledby="h-read">
+    <span class="eyebrow">Read the code one word at a time</span>
+    <h2 id="h-read">Every piece has a meaning, even the brackets</h2>
+    <p>Please press <b>Next</b> (or click any piece) and watch the sentence grow underneath. Today's new pieces are gold.</p>
+    <div class="reader">
+      <div class="bigq" id="bigq" role="group" aria-label="The query, one piece at a time"></div>
+      <div class="explain">
+        <div class="ebox">
+          <span class="kind" id="r-kind"></span>
+          <span class="big" id="r-big"></span>
+          <span id="r-what"></span>
+          <span class="tip" id="r-tip"></span>
+        </div>
+        <div class="ebox">
+          <span class="kind">Say it out loud</span>
+          <span class="sayit" id="r-say" aria-live="polite"></span>
+        </div>
+      </div>
+      <div class="nav">
+        <button class="btn ghost" id="r-back" type="button">◀ Back</button>
+        <button class="btn" id="r-next" type="button">Next ▶</button>
+        <span class="progress" id="r-prog"></span>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-sym">
+    <span class="eyebrow">Today's words and symbols</span>
+    <h2 id="h-sym">Say each one out loud</h2>
+    <p>Swap each word for what you say, and the code becomes a normal sentence again.</p>
+    <div class="symwrap">
+      <table class="sym">
+        <thead><tr><th>Write</th><th>Say it as</th><th>Example</th><th>Why it's there</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="4">The receipt words</td></tr>
+          <tr><td class="k-agg">COUNT</td><td class="say">“how many”</td><td><code>COUNT(*)</code></td><td>Counts the rows that are left after WHERE.</td></tr>
+          <tr><td class="k-agg">SUM</td><td class="say">“the total of”</td><td><code>SUM(price)</code></td><td>Adds up a number column.</td></tr>
+          <tr><td class="k-agg">AVG</td><td class="say">“the average of”</td><td><code>AVG(price)</code></td><td>Short for average. The total divided by how many rows.</td></tr>
+          <tr><td class="k-agg">MIN</td><td class="say">“the smallest”</td><td><code>MIN(price)</code></td><td>Short for minimum. The lowest value.</td></tr>
+          <tr><td class="k-agg">MAX</td><td class="say">“the biggest”</td><td><code>MAX(calories)</code></td><td>Short for maximum. The highest value.</td></tr>
+          <tr class="grp"><td colspan="4">Symbols</td></tr>
+          <tr><td class="k-sym">( )</td><td class="say">“of”</td><td><code>SUM(price)</code></td><td>Holds what the word works on. Every ( needs a matching ). Write it straight after the word with no space, because some databases refuse <code>SUM (price)</code>.</td></tr>
+          <tr><td class="k-sym">*</td><td class="say">“every row”</td><td><code>COUNT(*)</code></td><td>Inside COUNT the star means “count the rows”. Of the five receipt words, only COUNT takes a star.</td></tr>
+          <tr><td class="k-sym">,</td><td class="say">“and”</td><td><code>COUNT(*), AVG(price)</code></td><td>Ask for several answers at once. You still get one row, with one column for each.</td></tr>
+          <tr class="grp"><td colspan="4">A small bonus</td></tr>
+          <tr><td class="k-sym">AS</td><td class="say">“call it”</td><td><code>COUNT(*) AS drinks</code></td><td>Gives the answer column a friendly name instead of COUNT(*).</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-play">
+    <span class="eyebrow">Your turn</span>
+    <h2 id="h-play">Playground: watch the rows squash</h2>
+    <p>Please type a query and press <b>Run</b>. Watch the till count each row, then see everything squash into one row.</p>
+    <div class="play">
+      <div class="panel">
+        <div class="mission">
+          <div class="mission-top"><span class="eyebrow">Mission</span><div class="dots" id="dots"></div></div>
+          <h3 id="m-title"></h3>
+          <div class="row"><button class="linkbtn" id="m-hint-btn" type="button">Show a hint</button><button class="linkbtn" id="m-ans-btn" type="button">Show the answer</button></div>
+          <p class="hint" id="m-hint" hidden></p>
+        </div>
+        <label for="sql" class="eyebrow">Your query</label>
+        <textarea id="sql" spellcheck="false" autocapitalize="off" autocomplete="off">SELECT COUNT(*), SUM(price), AVG(price) FROM menu WHERE type = 'drink';</textarea>
+        <div class="row"><button class="btn" id="run" type="button">▶ Run</button><button class="btn ghost" id="replay" type="button">Replay slowly</button><span class="kbd">Ctrl + Enter also runs</span></div>
+        <div class="english" id="english" aria-live="polite"></div>
+        <div id="msg" aria-live="polite"></div>
+        <div>
+          <span class="eyebrow">Or try one of these</span>
+          <div class="examples" id="examples" style="margin-top:8px"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <ol class="steps" id="steps">
+          <li style="--c:var(--from)"><span class="n">1</span><span class="t"></span></li>
+          <li style="--c:var(--where)"><span class="n">2</span><span class="t"></span></li>
+          <li style="--c:var(--agg)"><span class="n">3</span><span class="t"></span></li>
+          <li style="--c:var(--ord)"><span class="n">4</span><span class="t"></span></li>
+          <li style="--c:var(--lim)"><span class="n">5</span><span class="t"></span></li>
+        </ol>
+        <div class="till" id="till" hidden><span class="lbl">The till</span><div id="till-lines"></div></div>
+        <div class="tablewrap" id="tw"><div id="stage"></div></div>
+        <div class="count" id="count"></div>
+        <p class="order-note">Order of work: <span class="k-from">FROM</span>, <span class="k-where">WHERE</span>, then <span class="k-sel">SELECT</span> (where the <span class="k-agg">receipt words</span> squash the rows), then <span class="k-ord">ORDER BY</span> and <span class="k-lim">LIMIT</span>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-quiz">
+    <span class="eyebrow">Lock it in</span>
+    <h2 id="h-quiz">Five quick questions</h2>
+    <p>Answering from memory is the fastest way to make something stick. Wrong answers explain themselves, so please don't worry.</p>
+    <div class="quiz" id="quiz"></div>
+    <div class="score" id="score" aria-live="polite"></div>
+  </section>
+
+  <section aria-labelledby="h-card">
+    <span class="eyebrow">Take this with you</span>
+    <h2 id="h-card">Your pocket card</h2>
+    <p>Please take a screenshot of this card. Read it once tomorrow and once next week.</p>
+    <div class="pocket">
+      <div class="line"><code class="k-agg">COUNT(*)</code><span><b>How many?</b></span></div>
+      <div class="line"><code class="k-agg">SUM(price)</code><span><b>What is the total?</b></span></div>
+      <div class="line"><code class="k-agg">AVG(price)</code><span><b>What is the average?</b></span></div>
+      <div class="line"><code class="k-agg">MIN(price)</code><span><b>What is the smallest?</b></span></div>
+      <div class="line"><code class="k-agg">MAX(price)</code><span><b>What is the biggest?</b></span></div>
+      <hr>
+      <ul>
+        <li>Think of the bottom of a café receipt.</li>
+        <li>Many rows in, one row out.</li>
+        <li>Brackets mean “of”: <code>AVG(price)</code> = “the average of price”.</li>
+        <li>SUM and AVG need a number column.</li>
+        <li>WHERE runs first, so you can count just the drinks.</li>
+        <li><code>AS</code> means “call it”: <code>COUNT(*) AS drinks</code>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Next lesson: <a href="lesson-4.html"><b>Lesson 4: GROUP BY</b></a>, or how to get one answer for the drinks and another for the food, in one go.</footer>
+  <p class="madeby">SQL Caf&eacute; is a free course by <a href="https://masshai.com">MASSH AI</a>. Want SQL or data training for your team? <a href="https://masshai.com/#contact">Please get in touch</a>.</p>
+</main>
+
+<script>
+(function(){
+const MENU = {
+  cols:['id','item','type','price','calories'],
+  num:{id:1,price:1,calories:1},
+  rows:[
+    {id:1,item:'Espresso',type:'drink',price:2.5,calories:5},
+    {id:2,item:'Cappuccino',type:'drink',price:3.5,calories:120},
+    {id:3,item:'Iced Latte',type:'drink',price:4.5,calories:180},
+    {id:4,item:'Hot Chocolate',type:'drink',price:4,calories:310},
+    {id:5,item:'Croissant',type:'food',price:3,calories:270},
+    {id:6,item:'Bagel',type:'food',price:3.5,calories:250},
+    {id:7,item:'Carrot Cake',type:'food',price:5.5,calories:420},
+    {id:8,item:'Fruit Cup',type:'food',price:4,calories:90}
+  ]
+};
+const FNS=['count','sum','avg','min','max'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let speed = 1;
+const sleep = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms * speed));
+
+/* ---------- tiny SQL reader ---------- */
+function lev(a,b){const m=[];for(let i=0;i<=a.length;i++){m[i]=[i];for(let j=1;j<=b.length;j++)m[i][j]=i?Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+(a[i-1]===b[j-1]?0:1)):j}return m[a.length][b.length]}
+function closest(w,list){let best=null,d=9;for(const c of list){const x=lev(w,c);if(x<d){d=x;best=c}}return d<=2?best:null}
+function badCol(w){const s=closest(w,MENU.cols);return 'There is no column called "'+w+'".'+(s?' Did you mean '+s+'?':' The columns are: '+MENU.cols.join(', ')+'.')}
+const ORDER_MSG='The order is: SELECT, FROM, WHERE, ORDER BY, LIMIT (Some Friendly Waiters Offer Lemonade).';
+
+function splitTop(s){ // split on commas that are not inside brackets
+  const out=[]; let depth=0, cur='';
+  for(const ch of s){ if(ch==='(')depth++; if(ch===')')depth--; if(ch===','&&depth===0){out.push(cur);cur=''} else cur+=ch; }
+  out.push(cur); return out;
+}
+function parseItem(raw){
+  let t=raw.trim(), alias=null;
+  if(!t) throw Error('There is an extra comma in your SELECT list. Commas go between items only.');
+  const am=t.match(/^([\s\S]+?)\s+as\s+([A-Za-z_]\w*)$/i);
+  if(am){ t=am[1].trim(); alias=am[2]; }
+  else if(/\s+as\s*$/i.test(t)) throw Error('Please give a name after AS, for example: COUNT(*) AS drinks');
+  const fm=t.match(/^([A-Za-z_]\w*)\s*\(\s*([^()]*?)\s*\)$/);
+  if(fm){
+    const fn=fm[1].toLowerCase(), arg=fm[2].toLowerCase();
+    if(!FNS.includes(fn)){ const s=closest(fn,FNS); throw Error('"'+fm[1]+'" is not one of today\'s words.'+(s?' Did you mean '+s.toUpperCase()+'?':' Please use COUNT, SUM, AVG, MIN or MAX.')); }
+    if(/^[A-Za-z_]\w*\s+\(/.test(t)) throw Error('Please remove the space before the bracket: write '+fm[1].toUpperCase()+'( not '+fm[1].toUpperCase()+' (. Some databases refuse the space.');
+    if(!arg) throw Error('The brackets are empty. Please put something inside, like '+fn.toUpperCase()+(fn==='count'?'(*)':'(price)')+'.');
+    if(arg==='*'){ if(fn!=='count') throw Error('The star only works inside COUNT. For '+fn.toUpperCase()+' please name a number column, like '+fn.toUpperCase()+'(price).'); }
+    else{
+      if(!MENU.cols.includes(arg)) throw Error(badCol(arg));
+      if((fn==='sum'||fn==='avg') && !MENU.num[arg]) throw Error('You can\'t add up words, so '+fn.toUpperCase()+'('+arg+') makes no sense. Please use a number column: price or calories.');
+    }
+    return {type:'agg',fn,arg,label:alias||fn.toUpperCase()+'('+arg+')'};
+  }
+  if(/\(|\)/.test(t)) throw Error('Brackets go straight after a receipt word, like COUNT(*) or SUM(price). Please check your brackets match.');
+  if(FNS.includes(t.toLowerCase())) throw Error(t.toUpperCase()+' needs brackets after it, like '+t.toUpperCase()+(t.toLowerCase()==='count'?'(*)':'(price)')+'.');
+  const c=t.toLowerCase();
+  if(c==='*') return {type:'star'};
+  if(/\s/.test(c)) throw Error('"'+t+'" looks like two words. Did you forget a comma?');
+  if(!MENU.cols.includes(c)) throw Error(badCol(c));
+  return {type:'col',col:c,label:alias||c};
+}
+function parse(src){
+  let s = src.trim().replace(/;\s*$/,'').trim();
+  if(!s) throw Error('Please type a query first, starting with SELECT.');
+  if(!/^select\b/i.test(s)) throw Error('Please start with SELECT. It answers "What do you want to see?"');
+  if(!/\bfrom\b/i.test(s)) throw Error('Please add FROM to say which table, for example: FROM menu');
+  const masked = s.replace(/'[^']*'|"[^"]*"/g, m => '_'.repeat(m.length));
+  if(/\bsort\s+by\b/i.test(masked)) throw Error('SQL says ORDER BY, not SORT BY. Please use ORDER BY.');
+  if(/\border\b(?!\s+by\b)/i.test(masked)) throw Error('Please write ORDER BY as two words, for example: ORDER BY price');
+  if(/\bgroup\s+by\b/i.test(masked)) throw Error('GROUP BY is in the next lesson. For now, please leave it out.');
+  if(/\baverage\s*\(/i.test(masked)) throw Error('SQL uses the short word AVG, not AVERAGE. Please write AVG(price).');
+  const find = re => { const m = re.exec(masked); return m ? m.index : -1; };
+  const iF = find(/\sfrom\s/i);
+  const iW = find(/\swhere\b/i), iO = find(/\sorder\s+by\b/i), iL = find(/\slimit\b/i);
+  if(iO>=0 && iW>iO) throw Error('Please put WHERE before ORDER BY. '+ORDER_MSG);
+  if(iL>=0 && iW>iL) throw Error('Please put WHERE before LIMIT. '+ORDER_MSG);
+  if(iL>=0 && iO>iL) throw Error('Please put ORDER BY before LIMIT. LIMIT always comes last.');
+  if(iF<0) throw Error('The pattern is: SELECT something FROM table');
+  const marks=[iW,iO,iL].filter(i=>i>=0);
+  const end = i => { const later = marks.filter(x=>x>i); return later.length?Math.min(...later):s.length; };
+  const selPart = s.slice(6, iF).trim();
+  if(!selPart) throw Error('Please say what you want after SELECT, like COUNT(*).');
+  const tablePart = s.slice(iF, marks.length?Math.min(...marks):s.length).replace(/^\s*from\s*/i,'').trim();
+  if(!tablePart) throw Error('Please add a table name after FROM. Our table is menu.');
+  if(/\s/.test(tablePart)) throw Error('After FROM menu I expected WHERE, ORDER BY or LIMIT, but found "'+tablePart.split(/\s+/)[1]+'".');
+  if(tablePart.toLowerCase()!=='menu') throw Error('There is no table called "'+tablePart+'". Our table is menu.');
+  const opens=(selPart.match(/\(/g)||[]).length, closes=(selPart.match(/\)/g)||[]).length;
+  if(opens!==closes) throw Error(opens>closes?'A bracket was opened but never closed. Please add the ) at the end.':'There is a ) without a matching (. Please check your brackets.');
+  const items=splitTop(selPart).map(parseItem);
+  if(items.some(i=>i.type==='star') && items.length>1) throw Error('Please use * on its own, not mixed with other things.');
+  const aggs=items.filter(i=>i.type==='agg'), plain=items.filter(i=>i.type==='col');
+  if(aggs.length && plain.length) throw Error('You can\'t mix '+plain[0].col+' with '+aggs[0].fn.toUpperCase()+' yet. '+aggs[0].fn.toUpperCase()+' squashes all rows into one, so which '+plain[0].col+' should that one row show? Lesson 4 (GROUP BY) solves this. For now, please remove '+plain[0].col+'.');
+  let cols = items[0].type==='star' ? MENU.cols.slice() : plain.map(i=>i.col);
+  let where=null, whereSrc='', order=null, orderSrc='', limit=null;
+  if(iW>=0){
+    whereSrc=s.slice(iW,end(iW)).replace(/^\s*where\b\s*/i,'').trim();
+    if(!whereSrc) throw Error('WHERE needs a test after it, like: WHERE price < 4');
+    if(/\b(count|sum|avg|min|max)\s*\(/i.test(whereSrc)) throw Error('Receipt words can\'t go inside WHERE, because WHERE checks one row at a time. Please keep them after SELECT.');
+    where=parseWhere(whereSrc);
+  }
+  if(iO>=0){
+    orderSrc=s.slice(iO,end(iO)).replace(/^\s*order\s+by\s*/i,'').trim();
+    if(!orderSrc) throw Error('Please say which column to sort by, like: ORDER BY price');
+    order=orderSrc.split(',').map(p=>{
+      const t=p.trim(); if(!t) throw Error('There is an extra comma after ORDER BY.');
+      const om=t.match(/^([A-Za-z_]\w*)(?:\s+(\w+))?$/);
+      if(!om) throw Error('After ORDER BY, please write a column name and, if you like, ASC or DESC.');
+      const col=om[1].toLowerCase();
+      if(!MENU.cols.includes(col)) throw Error(badCol(col));
+      let dir='asc'; if(om[2]){ const d=om[2].toLowerCase(); if(d!=='asc'&&d!=='desc') throw Error('After "'+om[1]+'" you can only write ASC or DESC.'); dir=d; }
+      return {col,dir};
+    });
+  }
+  if(iL>=0){
+    const v=s.slice(iL).replace(/^\s*limit\s*/i,'').trim();
+    if(!/^\d+$/.test(v)) throw Error('LIMIT needs a whole number with no quotes, like: LIMIT 3');
+    limit=parseInt(v,10);
+  }
+  if(aggs.length && order) throw Error('Receipt words give just one row, so there is nothing to sort. Please remove ORDER BY.');
+  return {items, aggs, cols, star:items[0].type==='star', isAgg:aggs.length>0, where, whereSrc, order, orderSrc, limit};
+}
+function tokenize(s){
+  const re=/\s*('[^']*'|"[^"]*"|<=|>=|!=|<>|=|<|>|-?\d+(?:\.\d+)?|[A-Za-z_]\w*)/y; const out=[];
+  re.lastIndex=0;
+  while(re.lastIndex<s.length){
+    const start=re.lastIndex; const m=re.exec(s);
+    if(!m){ const bad=s.slice(start).trim(); if(!bad) break;
+      if(bad[0]==="'"||bad[0]==='"') throw Error('A quote was opened but never closed. Text needs a quote on both sides: \'drink\'');
+      throw Error('I don\'t understand "'+bad.slice(0,12)+'" in your WHERE test.'); }
+    out.push(m[1]);
+  }
+  return out;
+}
+function parseWhere(s){
+  const t=tokenize(s); let i=0; const groups=[[]];
+  const OPS=['=','!=','<>','<','>','<=','>='];
+  while(true){
+    const col=t[i++];
+    if(!col) throw Error('WHERE needs a full test, like: price < 4');
+    const lc=col.toLowerCase();
+    if(!/^[A-Za-z_]/.test(col)) throw Error('A test starts with a column name, like: price < 4');
+    if(!MENU.cols.includes(lc)) throw Error(badCol(lc));
+    let op=t[i++];
+    if(!op) throw Error('After "'+col+'" please add a comparison, like = or <');
+    if(op.toLowerCase()==='like') op='like';
+    else if(!OPS.includes(op)) throw Error('"'+op+'" is not a comparison. Please use = != < > <= or >=');
+    const v=t[i++];
+    if(v===undefined) throw Error('Please finish the test: '+col+' '+op+' ... what?');
+    let val;
+    if(/^['"]/.test(v)) val=v.slice(1,-1);
+    else if(/^-?\d/.test(v)) val=parseFloat(v);
+    else throw Error('Text needs quotes: please write \''+v+'\' instead of '+v+'.');
+    groups[groups.length-1].push({col:lc,op,val});
+    const j=t[i];
+    if(j===undefined) break;
+    const jl=j.toLowerCase();
+    if(jl==='and'){i++} else if(jl==='or'){i++;groups.push([])}
+    else throw Error('Please join two tests with AND or OR. I found "'+j+'".');
+  }
+  return groups;
+}
+function test(row,c){
+  let a=row[c.col], b=c.val;
+  if(MENU.num[c.col] && typeof b==='string' && b.trim()!=='' && !isNaN(b)) b=parseFloat(b);
+  if(c.op==='like'){ const re=new RegExp('^'+String(b).replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/%/g,'.*').replace(/_/g,'.')+'$','i'); return re.test(String(a)); }
+  if(typeof a==='string'){a=a.toLowerCase(); b=String(b).toLowerCase();}
+  switch(c.op){case '=':return a===b;case '!=':case '<>':return a!==b;case '<':return a<b;case '>':return a>b;case '<=':return a<=b;case '>=':return a>=b}
+  return false;
+}
+const passes=(row,where)=>!where||where.some(g=>g.every(c=>test(row,c)));
+function cmpVal(x,y){ return typeof x==='string' ? x.localeCompare(y,undefined,{sensitivity:'base'}) : x-y; }
+function cmp(a,b,order){ for(const o of order){ const r=cmpVal(a[o.col],b[o.col]); if(r) return o.dir==='desc'?-r:r; } return 0; }
+function aggValue(a,rows){
+  if(a.fn==='count') return rows.length;
+  if(!rows.length) return null;
+  const vals=rows.map(r=>r[a.arg]);
+  if(a.fn==='sum') return Math.round(vals.reduce((x,y)=>x+y,0)*100)/100;
+  if(a.fn==='avg') return vals.reduce((x,y)=>x+y,0)/vals.length;
+  if(a.fn==='min') return vals.reduce((x,y)=>cmpVal(y,x)<0?y:x);
+  if(a.fn==='max') return vals.reduce((x,y)=>cmpVal(y,x)>0?y:x);
+}
+function fmtAgg(a,v){
+  if(v===null) return 'nothing';
+  if(a.fn==='count') return String(v);
+  if(a.arg==='price') return '£'+v.toFixed(2);
+  if(typeof v==='number'){ const r=Math.round(v*1000)/1000; return String(r); }
+  return String(v);
+}
+function execute(q){
+  const filtered=MENU.rows.filter(r=>passes(r,q.where));
+  if(q.isAgg){ const one=q.aggs.map(a=>aggValue(a,filtered)); return {filtered, sorted:filtered, final:[one], agg:true}; }
+  const sorted=q.order?filtered.slice().sort((a,b)=>cmp(a,b,q.order)):filtered.slice();
+  return {filtered, sorted, final:q.limit!==null?sorted.slice(0,q.limit):sorted, agg:false};
+}
+
+/* ---------- plain English ---------- */
+const OPW={'=':'is','!=':'is not','<>':'is not','<':'is less than','>':'is more than','<=':'is at most','>=':'is at least','like':'looks like'};
+const FNW={count:'how many rows',sum:'the total',avg:'the average',min:'the smallest',max:'the biggest'};
+function list(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1]}
+function whereWords(where){return where.map(g=>g.map(c=>c.col+' '+OPW[c.op]+' '+(typeof c.val==='string'?'“'+esc(c.val)+'”':c.val)).join(' <b>and</b> ')).join(' <b>or</b> ')}
+function aggWords(a){ if(a.fn==='count') return 'how many rows there are'; if((a.fn==='min'||a.fn==='max') && !MENU.num[a.arg]) return 'the '+(a.fn==='min'?'first':'last')+' '+a.arg+' from A to Z'; return FNW[a.fn]+' '+(a.fn==='sum'||a.fn==='avg'?'of ':'')+a.arg; }
+function dirWords(o){ const text=!MENU.num[o.col]; return o.dir==='desc'?(text?'Z to A':'biggest first'):(text?'A to Z':'smallest first'); }
+function english(q){
+  let s;
+  if(q.isAgg) s='Please tell me <span class="k-agg">'+list(q.aggs.map(aggWords))+'</span> <span class="k-from">in the menu</span>';
+  else s='Please show me <span class="k-sel">'+(q.star?'every column':list(q.cols))+'</span> <span class="k-from">from the menu</span>';
+  if(q.where) s+=' <span class="k-where">where '+whereWords(q.where)+'</span>';
+  if(q.order && !q.isAgg) s+=', <span class="k-ord">sorted by '+q.order.map((o,i)=>(i?'then by ':'')+o.col+' ('+dirWords(o)+')').join(', ')+'</span>';
+  if(q.limit!==null && !q.isAgg) s+=', <span class="k-lim">only the first '+q.limit+'</span>';
+  return '<span class="lbl">In plain English</span>'+s+'.';
+}
+
+/* ---------- animated run ---------- */
+const stage=$('#stage'), tw=$('#tw'), steps=[...document.querySelectorAll('#steps li')], till=$('#till'), tillLines=$('#till-lines');
+let runId=0;
+function cell(col,v){return '<td data-col="'+col+'"'+(MENU.num[col]?' class="num"':'')+'>'+(col==='price'?'£'+v.toFixed(2):esc(v))+'</td>'}
+function setStep(i,state,html){steps[i].className=state; if(html!==undefined) steps[i].querySelector('.t').innerHTML=html}
+function resetSteps(){
+  setStep(0,'','<span class="chip from">FROM</span> Open the table');
+  setStep(1,'','<span class="chip where">WHERE</span> Keep the rows that pass');
+  setStep(2,'','<span class="chip sel">SELECT</span> Pick columns, or <span class="chip agg">squash</span> into one answer');
+  setStep(3,'','<span class="chip ord">ORDER BY</span> Line the rows up');
+  setStep(4,'','<span class="chip lim">LIMIT</span> Keep only the first few');
+}
+function drawFull(){
+  let h='<table class="data"><thead><tr><th class="mark"></th>'+MENU.cols.map(c=>'<th data-col="'+c+'">'+c+'</th>').join('')+'</tr></thead><tbody>';
+  for(const r of MENU.rows) h+='<tr data-id="'+r.id+'"><td class="mark"></td>'+MENU.cols.map(c=>cell(c,r[c])).join('')+'</tr>';
+  stage.innerHTML=h+'</tbody></table>';
+}
+function drawResult(q,res){
+  if(res.agg){
+    const vals=res.final[0];
+    let h='<table class="data result one"><thead><tr>'+q.aggs.map(a=>'<th class="agg">'+esc(a.label)+'</th>').join('')+'</tr></thead><tbody><tr>'+q.aggs.map((a,i)=>'<td>'+esc(fmtAgg(a,vals[i]))+'</td>').join('')+'</tr></tbody></table>';
+    stage.innerHTML=h; return;
+  }
+  const rows=res.final;
+  if(!rows.length){stage.innerHTML='<p style="padding:20px;color:var(--muted)">No rows are left, so the answer is empty. That is a real answer too!</p>';return}
+  const arrow=c=>{ if(!q.order) return ''; const o=q.order.find(x=>x.col===c); return o?(o.dir==='desc'?' ↓':' ↑'):''; };
+  let h='<table class="data result"><thead><tr>'+q.cols.map(c=>'<th>'+c+arrow(c)+'</th>').join('')+'</tr></thead><tbody>';
+  rows.forEach((r,i)=>{h+='<tr style="animation-delay:'+(i*40)+'ms">'+q.cols.map(c=>cell(c,r[c])).join('')+'</tr>'});
+  stage.innerHTML=h+'</tbody></table>';
+}
+function tillShow(q,rows){
+  const n=rows.length;
+  tillLines.innerHTML=q.aggs.map(a=>{
+    let left=esc(a.fn.toUpperCase()+'('+a.arg+')'), right;
+    if(a.fn==='count') right='<b>'+n+'</b>';
+    else if(!n) right='<b>nothing yet</b>';
+    else{
+      const vals=rows.map(r=>r[a.arg]);
+      const f=v=>a.arg==='price'?'£'+v.toFixed(2):String(v);
+      if(a.fn==='sum') right=vals.map(f).join(' + ')+' = <b>'+fmtAgg(a,aggValue(a,rows))+'</b>';
+      else if(a.fn==='avg'){
+        const s=Math.round(vals.reduce((x,y)=>x+y,0)*100)/100, exact=Math.round(s/n*1000)/1000;
+        if(a.arg==='price' && Math.abs(exact*100-Math.round(exact*100))>1e-9) right=f(s)+' ÷ '+n+' = £'+exact+', rounded to <b>'+fmtAgg(a,s/n)+'</b>';
+        else right=f(s)+' ÷ '+n+' = <b>'+fmtAgg(a,s/n)+'</b>';
+      }
+      else right=(a.fn==='min'?'smallest so far: ':'biggest so far: ')+'<b>'+fmtAgg(a,aggValue(a,rows))+'</b>';
+    }
+    return '<div class="ln"><span>'+left+'</span><span>'+right+'</span></div>';
+  }).join('');
+}
+async function animate(q,res){
+  const id=++runId; const alive=()=>id===runId;
+  resetSteps(); drawFull(); tw.classList.remove('lit'); $('#count').textContent=''; till.hidden=true;
+  await sleep(200); if(!alive())return;
+  setStep(0,'active','<span class="chip from">FROM menu</span> Open the menu table: 8 rows.');
+  tw.classList.add('lit'); await sleep(800); if(!alive())return;
+  setStep(0,'done'); tw.classList.remove('lit');
+
+  const trs=[...stage.querySelectorAll('tbody tr')];
+  const byId={}; trs.forEach(t=>byId[t.dataset.id]=t);
+  if(q.where){
+    setStep(1,'active','<span class="chip where">WHERE '+esc(q.whereSrc)+'</span> Testing each row…');
+    for(const tr of trs){
+      const row=MENU.rows.find(r=>r.id==tr.dataset.id);
+      tr.classList.add('checking'); await sleep(220); if(!alive())return;
+      tr.classList.remove('checking');
+      const ok=passes(row,q.where);
+      tr.classList.add(ok?'keep':'drop'); tr.querySelector('.mark').textContent=ok?'✓':'✗';
+    }
+    await sleep(500); if(!alive())return;
+    trs.forEach(tr=>{if(tr.classList.contains('drop'))tr.hidden=true});
+    setStep(1,'done','<span class="chip where">WHERE '+esc(q.whereSrc)+'</span> '+res.filtered.length+' of 8 rows passed.');
+  } else setStep(1,'done','<span class="chip where">no WHERE</span> No test, so all 8 rows stay.');
+
+  const vis=trs.filter(t=>!t.hidden);
+  if(q.isAgg){
+    setStep(2,'active','<span class="chip agg">'+esc(q.aggs.map(a=>a.fn.toUpperCase()+'('+a.arg+')').join(', '))+'</span> The till goes through each row…');
+    const args=[...new Set(q.aggs.map(a=>a.arg).filter(a=>a!=='*'))];
+    stage.querySelectorAll('[data-col]').forEach(el=>{ if(args.includes(el.dataset.col)) el.classList.add('aggcol'); else if(args.length) el.classList.add('col-drop'); });
+    till.hidden=false; tillShow(q,[]);
+    const seen=[];
+    for(const tr of vis){
+      tr.classList.add('counting'); seen.push(MENU.rows.find(r=>r.id==tr.dataset.id));
+      const m=tr.querySelector('.mark'); m.textContent=seen.length; m.classList.add('counted');
+      tillShow(q,seen); await sleep(420); if(!alive())return;
+      tr.classList.remove('counting');
+    }
+    await sleep(500); if(!alive())return;
+    vis.forEach(t=>t.classList.add('squashed'));
+    setStep(2,'done','<span class="chip agg">squashed</span> '+vis.length+' row'+(vis.length===1?'':'s')+' in, 1 row out.');
+    await sleep(700); if(!alive())return;
+    setStep(3,'done','<span class="chip ord">'+(q.order?'ORDER BY':'no ORDER BY')+'</span> Only one row, so there is nothing to sort.');
+    setStep(4,'done','<span class="chip lim">'+(q.limit!==null?'LIMIT':'no LIMIT')+'</span> One row is all there is.');
+    drawResult(q,res);
+    $('#count').innerHTML='Answer: <span class="k-agg">1 row</span> × <span class="k-agg">'+q.aggs.length+' column'+(q.aggs.length===1?'':'s')+'</span>';
+    return;
+  }
+
+  setStep(2,'active','<span class="chip sel">SELECT '+(q.star?'*':esc(q.cols.join(', ')))+'</span> '+(q.star?'Every column stays.':'Fade the other columns.'));
+  stage.querySelectorAll('[data-col]').forEach(el=>{
+    if(q.cols.includes(el.dataset.col)){ if(el.tagName==='TH') el.classList.add('col-keep') } else el.classList.add('col-drop');
+  });
+  await sleep(800); if(!alive())return;
+  setStep(2,'done');
+  if(q.order){
+    setStep(3,'active','<span class="chip ord">ORDER BY '+esc(q.orderSrc)+'</span> Lining the rows up…');
+    stage.querySelectorAll('[data-col="'+q.order[0].col+'"]').forEach(el=>el.classList.add('sortcol'));
+    await sleep(600); if(!alive())return;
+    const first=new Map(vis.map(t=>[t,t.getBoundingClientRect().top]));
+    const tbody=stage.querySelector('tbody');
+    res.sorted.forEach(r=>tbody.appendChild(byId[r.id]));
+    vis.forEach(t=>{const d=first.get(t)-t.getBoundingClientRect().top; t.style.transition='none'; t.style.transform='translateY('+d+'px)'});
+    void tbody.offsetHeight;
+    vis.forEach(t=>{t.style.transition='transform .8s cubic-bezier(.2,.7,.2,1)'; t.style.transform=''});
+    await sleep(900); if(!alive())return;
+    res.sorted.forEach((r,i)=>{const m=byId[r.id].querySelector('.mark'); m.textContent=i+1; m.classList.add('rank')});
+    setStep(3,'done','<span class="chip ord">ORDER BY '+esc(q.orderSrc)+'</span> The rows are in order, numbered 1, 2, 3…');
+  } else setStep(3,'done','<span class="chip ord">no ORDER BY</span> Order is not guaranteed.');
+  if(q.limit!==null){
+    setStep(4,'active','<span class="chip lim">LIMIT '+q.limit+'</span> Keep the first '+q.limit+'.');
+    res.sorted.forEach((r,i)=>{const tr=byId[r.id]; if(i<q.limit){tr.classList.add('kept')} else {tr.classList.add('cut'); tr.querySelector('.mark').textContent='✗'}});
+    await sleep(900); if(!alive())return;
+    setStep(4,'done');
+  } else setStep(4,'done','<span class="chip lim">no LIMIT</span> You get every row that is left.');
+  await sleep(300); if(!alive())return;
+  drawResult(q,res);
+  $('#count').innerHTML='Answer: <span class="k-sel">'+res.final.length+' row'+(res.final.length===1?'':'s')+'</span> × <span class="k-sel">'+q.cols.length+' column'+(q.cols.length===1?'':'s')+'</span>';
+}
+
+/* ---------- missions ---------- */
+const ALL=[1,2,3,4,5,6,7,8];
+const MISSIONS=[
+  {title:'Please count how many things are on the whole menu.', need:[{fn:'count',arg:'*'}], rows:ALL,
+   hint:'COUNT(*) counts rows. You want every row, so no WHERE.', answer:'SELECT COUNT(*) FROM menu;'},
+  {title:'Please tell me the total price of all the drinks.', need:[{fn:'sum',arg:'price'}], rows:[1,2,3,4],
+   hint:'“Total” is SUM. Use WHERE to keep only the drinks first.', answer:"SELECT SUM(price) FROM menu WHERE type = 'drink';"},
+  {title:'Please find the average calories of the food.', need:[{fn:'avg',arg:'calories'}], rows:[5,6,7,8],
+   hint:'“Average” is AVG. Put the calories column inside the brackets.', answer:"SELECT AVG(calories) FROM menu WHERE type = 'food';"},
+  {title:'Please show the cheapest price and the most expensive price on the whole menu, in one query.', need:[{fn:'min',arg:'price'},{fn:'max',arg:'price'}], rows:ALL,
+   hint:'Cheapest is MIN, most expensive is MAX. Put a comma between them.', answer:'SELECT MIN(price), MAX(price) FROM menu;'}
+];
+let cur=0; const won=new Set();
+try{ JSON.parse(localStorage.getItem('sqlcafe3-won')||'[]').forEach(i=>won.add(i)) }catch(e){}
+function saveWon(){ try{ localStorage.setItem('sqlcafe3-won',JSON.stringify([...won])) }catch(e){} }
+function drawMission(){
+  const m=MISSIONS[cur];
+  $('#m-title').textContent=m.title;
+  $('#m-hint').hidden=true; $('#m-hint').textContent='';
+  $('#dots').innerHTML=MISSIONS.map((_,i)=>'<button type="button" aria-label="Mission '+(i+1)+(won.has(i)?' (done)':'')+'" class="'+(i===cur?'cur ':'')+(won.has(i)?'won':'')+'" data-i="'+i+'">'+(won.has(i)?'✓':i+1)+'</button>').join('');
+}
+$('#dots').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cur=+b.dataset.i;drawMission();$('#msg').innerHTML=''});
+$('#m-hint-btn').onclick=()=>{const h=$('#m-hint');h.hidden=false;h.textContent='Hint: '+MISSIONS[cur].hint};
+$('#m-ans-btn').onclick=()=>{const h=$('#m-hint');h.hidden=false;h.innerHTML='Answer: <code>'+esc(MISSIONS[cur].answer)+'</code>. Please type it in yourself, as typing helps you remember.'};
+function check(q,res){
+  const m=MISSIONS[cur], say=h=>$('#msg').innerHTML=h;
+  const has=n=>q.aggs.some(a=>a.fn===n.fn&&a.arg===n.arg);
+  const rowsOk=res.filtered.map(r=>r.id).join(',')===m.rows.join(',');
+  if(!q.isAgg){ say('<div class="msg near">This mission wants a summary, not a list of rows, so please use a receipt word like <span class="k-agg">'+m.need[0].fn.toUpperCase()+'</span>.</div>'); return; }
+  const missing=m.need.filter(n=>!has(n));
+  if(!missing.length && rowsOk){
+    won.add(cur); saveWon();
+    const next=MISSIONS.map((_,k)=>(cur+1+k)%MISSIONS.length).find(i=>!won.has(i)) ?? -1;
+    say('<div class="msg win">Mission '+(cur+1)+' done! '+(next<0?'You finished all four. Well done!':'On to the next one.')+'</div>');
+    if(next>=0) cur=next; drawMission();
+  } else if(!missing.length){
+    say('<div class="msg near">Right receipt word! But it worked on '+res.filtered.length+' rows and this mission needs '+m.rows.length+'. Please check your <span class="k-where">WHERE</span>.</div>');
+  } else {
+    say('<div class="msg near">Nearly. This mission needs <span class="k-agg">'+missing.map(n=>n.fn.toUpperCase()+'('+n.arg+')').join(' and ')+'</span>. Would a hint help?</div>');
+  }
+}
+
+/* ---------- wiring ---------- */
+const ta=$('#sql');
+function run(slow){
+  speed=slow?1.8:1;
+  let q; try{ q=parse(ta.value) }catch(e){ runId++; $('#msg').innerHTML='<div class="msg err">'+esc(e.message)+'</div>'; return }
+  $('#english').innerHTML=english(q);
+  const res=execute(q);
+  $('#msg').innerHTML='';
+  const my=runId+1;
+  animate(q,res).then(()=>{ if(!slow && runId===my) check(q,res) });
+}
+$('#run').onclick=()=>run(false);
+$('#replay').onclick=()=>run(true);
+ta.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();run(false)}});
+ta.addEventListener('input',()=>{try{$('#english').innerHTML=english(parse(ta.value))}catch(e){}});
+const EX=["SELECT COUNT(*) FROM menu;","SELECT COUNT(*) FROM menu WHERE price < 4;","SELECT SUM(price) FROM menu;","SELECT AVG(price) FROM menu WHERE type = 'food';","SELECT MIN(calories), MAX(calories) FROM menu;","SELECT COUNT(*) AS drinks FROM menu WHERE type = 'drink';"];
+$('#examples').innerHTML=EX.map(x=>'<button type="button">'+esc(x)+'</button>').join('');
+$('#examples').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ta.value=b.textContent;run(false)});
+resetSteps(); drawFull(); $('#english').innerHTML=english(parse(ta.value)); drawMission();
+
+/* ---------- word-by-word reader ---------- */
+const READ=[
+  {t:'SELECT',c:'sel',kind:'Main word',what:'Today it means “please tell me”, because the answer is a summary, not a list.',tip:'You know this one from Lesson 1.',say:'Please tell me'},
+  {t:'COUNT',c:'agg',kind:'Receipt word',what:'Counts rows. It answers: How many?',tip:'Like “Items: 4” on a receipt.',say:'the count'},
+  {t:'(',j:1,c:'sym',kind:'Open bracket',what:'Opens the bag that holds what COUNT should work on.',tip:'Say it as “of”. No space before it.',say:'of'},
+  {t:'*',j:1,c:'sym',kind:'Star',what:'Inside COUNT, the star means “every row”.',tip:'Of the five receipt words, only COUNT takes a star.',say:'every row'},
+  {t:')',j:1,c:'sym',kind:'Close bracket',what:'Closes the bag. Every ( needs a matching ).',tip:'You don\'t say anything for this one.',say:''},
+  {t:',',j:1,c:'sym',kind:'Comma',what:'Means “and”: we want a second answer too.',tip:'You still get one row, with two columns.',say:'and'},
+  {t:'AVG',c:'agg',kind:'Receipt word',what:'Short for average: the total shared out equally.',tip:'AVG needs a number column.',say:'the average'},
+  {t:'(',j:1,c:'sym',kind:'Open bracket',what:'Opens the bag again.',tip:'Say it as “of”.',say:'of'},
+  {t:'price',j:1,c:'name',kind:'Column name',what:'The column AVG works on: every price gets added, then divided by how many.',tip:'',say:'price'},
+  {t:')',j:1,c:'sym',kind:'Close bracket',what:'Closes the bag.',tip:'',say:''},
+  {t:'FROM',c:'from',kind:'Main word',what:'Says where the data lives.',tip:'',say:'in the'},
+  {t:'menu',c:'name',kind:'Table name',what:'Our one table.',tip:'',say:'menu,'},
+  {t:'WHERE',c:'where',kind:'Main word',what:'Keeps only some rows. This happens before the counting.',tip:'So only the drinks are counted.',say:'but only where'},
+  {t:'type',c:'name',kind:'Column name',what:'The column we test.',tip:'',say:'the type'},
+  {t:'=',c:'sym',kind:'Comparison',what:'“Is”: exactly the same as.',tip:'',say:'is'},
+  {t:"'drink'",c:'name',kind:'Text',what:'The word we look for, in quotes because it is text.',tip:'',say:'“drink”'},
+  {t:';',j:1,c:'sym',kind:'Semicolon',what:'The full stop. “My question is finished.”',tip:'',say:'. Done!'}
+];
+let rStep=0;
+const bigq=$('#bigq');
+bigq.innerHTML=READ.map((r,i)=>'<button type="button" class="tok t-'+r.c+(r.j?' join':'')+'" data-i="'+i+'" aria-label="'+esc(r.kind+': '+r.t)+'">'+esc(r.t)+'</button>').join('');
+const toks=[...bigq.querySelectorAll('.tok')];
+function drawReader(){
+  const r=READ[rStep];
+  toks.forEach((el,i)=>{el.classList.toggle('seen',i<=rStep);el.classList.toggle('on',i===rStep)});
+  $('#r-kind').textContent=r.kind;
+  const big=$('#r-big'); big.textContent=r.t; big.className='big k-'+r.c;
+  $('#r-what').textContent=r.what; $('#r-tip').textContent=r.tip;
+  let s='', first=true;
+  READ.slice(0,rStep+1).forEach((x,i)=>{
+    if(!x.say){ if(i===rStep) s+=' <span class="new">( nothing to say )</span>'; return; }
+    const w=esc(x.say); const sep=(first||/^[.,]/.test(x.say))?'':' '; first=false;
+    s+=sep+(i===rStep?'<span class="new">'+w+'</span>':w);
+  });
+  $('#r-say').innerHTML='“'+s.trim()+(rStep===READ.length-1?'':' …')+'”';
+  $('#r-prog').textContent='Piece '+(rStep+1)+' of '+READ.length;
+  $('#r-back').disabled=rStep===0;
+  $('#r-next').textContent=rStep===READ.length-1?'Start again ↺':'Next ▶';
+}
+$('#r-next').onclick=()=>{rStep=rStep===READ.length-1?0:rStep+1;drawReader()};
+$('#r-back').onclick=()=>{if(rStep>0){rStep--;drawReader()}};
+bigq.addEventListener('click',e=>{const b=e.target.closest('.tok');if(!b)return;rStep=+b.dataset.i;drawReader()});
+drawReader();
+
+/* ---------- quiz ---------- */
+const QUIZ=[
+  {p:'Which word tells you how many rows there are?',o:['COUNT','SUM','AVG'],a:0,why:'COUNT answers “How many?”, like “Items: 4” on a receipt.'},
+  {p:'What does SUM(price) give you?',o:['How many prices there are','The biggest price','The total of all the prices'],a:2,why:'SUM is the total, like the bottom line on a receipt.'},
+  {p:'How many rows come back from SELECT COUNT(*) FROM menu?',o:['8','1','0'],a:1,why:'Many rows in, one row out. That one row holds the number 8.'},
+  {p:'In AVG(price), how do you read the brackets?',o:['As “of”: the average of price','As “times”','You don\'t need them'],a:0,why:'Brackets mean “of” and they are not optional: AVG(price) = “the average of price”.'},
+  {p:'Why does SELECT SUM(item) FROM menu make no sense?',o:['SUM needs a star','You can\'t add up words','item needs quotes'],a:1,why:'SUM and AVG need a number column, like price or calories.'}
+];
+let right=0, answered=0;
+$('#quiz').innerHTML=QUIZ.map((q,i)=>'<div class="qz" data-q="'+i+'"><span class="eyebrow">Question '+(i+1)+'</span><span class="prompt">'+esc(q.p)+'</span><div class="opts">'+q.o.map((o,j)=>'<button type="button" data-j="'+j+'">'+esc(o)+'</button>').join('')+'</div><p class="why" hidden></p></div>').join('');
+$('#quiz').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b||b.disabled)return;
+  const box=b.closest('.qz'), q=QUIZ[+box.dataset.q], j=+b.dataset.j;
+  box.querySelectorAll('button').forEach((x,k)=>{x.disabled=true; if(k===q.a)x.classList.add('right')});
+  if(j!==q.a)b.classList.add('wrong'); else right++;
+  answered++;
+  const w=box.querySelector('.why'); w.hidden=false; w.textContent=(j===q.a?'Yes! ':'Not this time. ')+q.why;
+  if(answered===QUIZ.length) $('#score').textContent='You got '+right+' of '+QUIZ.length+'. '+(right===QUIZ.length?'Perfect. You know Lesson 3.':'Please come back tomorrow and try again. Each try makes it stick.');
+});
+})();
+</script>
+
+</body>
+</html>

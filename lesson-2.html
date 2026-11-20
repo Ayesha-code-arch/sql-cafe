@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="SQL Cafe Lesson 2: ORDER BY and LIMIT, with rows that slide into order.">
+<link rel="canonical" href="https://learn.masshai.com/lesson-2.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%234263EB%27/%3E%3Cpath d=%27M16 24h26v14a10 10 0 0 1-10 10h-6a10 10 0 0 1-10-10z%27 fill=%27white%27/%3E%3Cpath d=%27M42 28h4a5 5 0 0 1 0 10h-4%27 stroke=%27white%27 stroke-width=%274%27 fill=%27none%27/%3E%3C/svg%3E">
+<style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}.topnav{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:.9rem;font-weight:700;margin-bottom:-40px}.topnav a{color:var(--sel);text-decoration:none}.topnav a:hover{text-decoration:underline}.topnav .mid{color:var(--muted)}.madeby{margin-top:-40px;padding-top:18px;border-top:1px dashed var(--line);color:var(--muted);font-size:.9rem;max-width:none}.madeby a{color:var(--sel)}</style>
+<title>SQL Café Lesson 2</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: same calm reading column as Lesson 1; every keyword keeps its own colour, and the two new words get two new colours (ORDER BY teal, LIMIT green). */
+:root{
+  --bg:#F3F6FC; --surface:#FFFFFF; --ink:#1A2340; --muted:#56617F; --line:#DCE3F0; --band:#E6ECFA;
+  --sel:#4263EB; --sel-soft:#E5EAFF;
+  --from:#E07A00; --from-soft:#FFF0DC;
+  --where:#D6336C; --where-soft:#FFE3EC;
+  --ord:#0C8599; --ord-soft:#DDF6FA;
+  --lim:#5C940D; --lim-soft:#EBF7D6;
+  --sym:#7048E8; --sym-soft:#EFE9FF;
+  --ok:#0B8A64; --ok-soft:#DCF5EC; --bad:#C92A2A; --bad-soft:#FFE3E3;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10142A; --surface:#181E3A; --ink:#E8ECFA; --muted:#A0A9C9; --line:#2A3358; --band:#1C2448;
+  --sel:#8DA2FF; --sel-soft:#232E63; --from:#FFB04D; --from-soft:#3D2A10;
+  --where:#FF7BA6; --where-soft:#45182B; --ord:#3BC9DB; --ord-soft:#0F3A42; --lim:#A9E34B; --lim-soft:#2A3A12;
+  --sym:#B39CFF; --sym-soft:#2D2360;
+  --ok:#4FD6A5; --ok-soft:#123A30; --bad:#FF8787; --bad-soft:#451C1C;
+  color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#10142A; --surface:#181E3A; --ink:#E8ECFA; --muted:#A0A9C9; --line:#2A3358; --band:#1C2448;
+  --sel:#8DA2FF; --sel-soft:#232E63; --from:#FFB04D; --from-soft:#3D2A10;
+  --where:#FF7BA6; --where-soft:#45182B; --ord:#3BC9DB; --ord-soft:#0F3A42; --lim:#A9E34B; --lim-soft:#2A3A12;
+  --sym:#B39CFF; --sym-soft:#2D2360;
+  --ok:#4FD6A5; --ok-soft:#123A30; --bad:#FF8787; --bad-soft:#451C1C;
+  color-scheme:dark }
+
+*{box-sizing:border-box;font-variant-ligatures:none}
+.qz:last-child:nth-child(odd){grid-column:1/-1}
+.sym td.say{min-width:150px}
+@media (max-width:640px){
+  .symwrap table.sym{min-width:0}
+  .sym thead{display:none}
+  table.sym,.sym tbody{display:block}
+  .sym tr{display:flex;flex-wrap:wrap;gap:6px 14px;padding:14px 16px;border-bottom:1px solid var(--line);align-items:baseline}
+  .sym td{display:block;border:none !important;padding:0 !important;min-width:0 !important}
+  .sym td:nth-child(3),.sym td:nth-child(4){flex:1 1 100%}
+  .sym td code{white-space:normal}
+  .sym tr.grp{display:block;padding:0;border-bottom:1px solid var(--line)}
+  .sym tr.grp td{display:block;padding:8px 16px !important}
+}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:40px 80px;display:flex;flex-direction:column;gap:72px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:clamp(2.2rem,6vw,3.6rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(1.6rem,4vw,2.2rem);font-weight:800}
+h3{font-size:1.25rem;font-weight:600}
+p{margin:0;max-width:65ch}
+a{color:var(--sel)}
+.eyebrow{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:20px}
+code,.mono{font-family:var(--mono)}
+.k-sel{color:var(--sel);font-weight:700}
+.k-from{color:var(--from);font-weight:700}
+.k-where{color:var(--where);font-weight:700}
+.k-ord{color:var(--ord);font-weight:700}
+.k-lim{color:var(--lim);font-weight:700}
+.k-sym{color:var(--sym);font-weight:700}
+.chip{display:inline-block;font-family:var(--mono);font-weight:600;font-size:.82rem;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.chip.sel{background:var(--sel-soft);color:var(--sel)}
+.chip.from{background:var(--from-soft);color:var(--from)}
+.chip.where{background:var(--where-soft);color:var(--where)}
+.chip.ord{background:var(--ord-soft);color:var(--ord)}
+.chip.lim{background:var(--lim-soft);color:var(--lim)}
+.chip.sym{background:var(--sym-soft);color:var(--sym)}
+
+/* hero */
+.hero{display:flex;flex-direction:column;gap:22px;background:var(--band);border-radius:24px;padding:clamp(20px,4vw,40px)}
+.pair{white-space:nowrap}
+.recap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.92rem;color:var(--muted)}
+.order{display:flex;flex-direction:column;gap:14px;margin-top:6px}
+.bubble{background:var(--surface);border:1px solid var(--line);border-radius:18px 18px 18px 4px;padding:18px 22px;font-size:clamp(1.1rem,2.6vw,1.4rem);max-width:720px;line-height:1.7}
+.bubble small{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.u{border-bottom:3px solid;padding-bottom:1px}
+.u.sel{border-color:var(--sel)} .u.from{border-color:var(--from)} .u.where{border-color:var(--where)} .u.ord{border-color:var(--ord)} .u.lim{border-color:var(--lim)}
+.arrow{font-family:var(--mono);color:var(--muted);padding-left:22px}
+.sqlline{font-family:var(--mono);font-size:clamp(.95rem,2.3vw,1.2rem);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 22px;max-width:720px;line-height:1.7}
+
+/* question cards */
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:720px){.two{grid-template-columns:1fr}}
+.q{background:var(--cs);border:2px solid var(--c);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:12px}
+.q .kw{font-family:var(--mono);font-weight:600;font-size:1.5rem;color:var(--c)}
+.q .ask{font-family:var(--display);font-weight:800;font-size:1.35rem;line-height:1.15}
+.q p{color:var(--muted);font-size:.95rem}
+.memo{font-size:.9rem;font-weight:700;color:var(--c)}
+.bars{display:flex;align-items:flex-end;gap:6px;height:64px}
+.bars i{display:block;width:22px;border-radius:4px 4px 0 0;background:var(--c)}
+.cups{display:flex;gap:6px}
+.cups i{display:block;width:26px;height:26px;border-radius:6px;background:var(--c)}
+.cups i.off{background:var(--surface);outline:2px dashed var(--line);outline-offset:-2px}
+
+.stairs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:720px){.stairs{grid-template-columns:1fr}}
+.stair{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:10px}
+.stair .word{font-family:var(--mono);font-weight:600;font-size:1.4rem;color:var(--ord)}
+.stair .bars i{background:var(--ord)}
+.stair .eg{font-family:var(--mono);font-size:.88rem;color:var(--muted)}
+.fact{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+.fact b{font-family:var(--display)}
+.order-pill{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-family:var(--mono);font-size:.9rem}
+
+.mnemo{background:var(--surface);border:2px solid var(--ink);border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:14px}
+.mnemo .words{display:flex;flex-wrap:wrap;gap:10px 18px;font-family:var(--display);font-weight:800;font-size:clamp(1.4rem,4vw,2.1rem);line-height:1.1}
+.mnemo .words span b{font-size:1.15em}
+.mnemo .map{display:flex;flex-wrap:wrap;gap:8px}
+
+/* reader */
+.reader{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:clamp(18px,3vw,28px);display:flex;flex-direction:column;gap:18px}
+.bigq{font-family:var(--mono);font-size:clamp(1.05rem,3.2vw,1.6rem);display:flex;flex-wrap:wrap;gap:6px 4px;align-items:baseline;line-height:1.5}
+.tok{padding:2px 6px;border-radius:8px;cursor:pointer;border:2px solid transparent;background:none;font:inherit;color:inherit;opacity:.3;transition:opacity .25s,background .25s,border-color .25s}
+.tok.seen{opacity:1}
+.tok.join{margin-left:-14px}
+.tok.on{opacity:1;border-color:currentColor;background:var(--ts)}
+.tok.t-sel{color:var(--sel);--ts:var(--sel-soft);font-weight:600}
+.tok.t-from{color:var(--from);--ts:var(--from-soft);font-weight:600}
+.tok.t-ord{color:var(--ord);--ts:var(--ord-soft);font-weight:600}
+.tok.t-lim{color:var(--lim);--ts:var(--lim-soft);font-weight:600}
+.tok.t-sym{color:var(--sym);--ts:var(--sym-soft);font-weight:600}
+.tok.t-name{color:var(--ink);--ts:var(--band)}
+.explain{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:700px){.explain{grid-template-columns:1fr}}
+.ebox{background:var(--bg);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.ebox .big{font-family:var(--mono);font-size:1.6rem;font-weight:600}
+.ebox .kind{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:var(--muted)}
+.ebox .tip{font-size:.92rem;color:var(--muted)}
+.sayit{font-size:clamp(1.05rem,2.6vw,1.3rem);font-weight:700;line-height:1.4}
+.sayit .new{background:var(--sym-soft);color:var(--sym);border-radius:6px;padding:0 4px}
+.reader .nav{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.progress{font-size:.85rem;color:var(--muted);margin-left:auto}
+
+/* symbol table */
+.symwrap{overflow-x:auto;border-radius:16px;border:1px solid var(--line);background:var(--surface)}
+table.sym{border-collapse:collapse;width:100%;min-width:620px}
+.sym th,.sym td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;font-size:.95rem}
+.sym th{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);background:var(--band)}
+.sym td:first-child{font-family:var(--mono);font-weight:700;font-size:1.15rem;white-space:nowrap}
+.sym td.say{font-weight:700}
+.sym td code{font-size:.88rem;background:var(--bg);padding:2px 6px;border-radius:6px;white-space:nowrap}
+.sym tr.grp td{background:var(--bg);font-family:var(--body);font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;padding:8px 14px}
+.tipbox{background:var(--sym-soft);color:var(--ink);border-radius:14px;padding:14px 18px;font-size:.95rem}
+
+/* playground */
+.play{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px;align-items:start}
+@media (max-width:860px){.play{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.mission{background:var(--bg);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.mission-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.dots{display:flex;gap:6px}
+.dots button{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);background:var(--surface);color:var(--muted);font:700 .75rem var(--body);cursor:pointer;padding:0}
+.dots button.cur{border-color:var(--ink);color:var(--ink)}
+.dots button.won{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.mission h3{font-size:1.1rem}
+.linkbtn{background:none;border:none;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:.88rem}
+.hint{font-size:.9rem;color:var(--muted)}
+textarea{width:100%;min-height:120px;resize:vertical;font-family:var(--mono);font-size:15px;line-height:1.5;padding:12px 14px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
+textarea:focus{outline:none;border-color:var(--sel)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font:700 1rem var(--body);padding:10px 20px;border-radius:10px;border:none;background:var(--ink);color:var(--bg);cursor:pointer}
+.btn:hover{opacity:.88}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
+.kbd{font-size:.8rem;color:var(--muted)}
+.examples{display:flex;flex-wrap:wrap;gap:6px}
+.examples button{font-family:var(--mono);font-size:.78rem;padding:5px 9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;text-align:left}
+.examples button:hover{border-color:var(--ink)}
+.english{font-size:1rem;background:var(--bg);border-radius:10px;padding:10px 14px}
+.english .lbl{display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.msg{border-radius:10px;padding:10px 14px;font-weight:700;font-size:.95rem}
+.msg.err{background:var(--bad-soft);color:var(--bad)}
+.msg.win{background:var(--ok-soft);color:var(--ok)}
+.msg.near{background:var(--from-soft);color:var(--from)}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.steps li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:10px;align-items:start;padding:8px 12px;border-radius:10px;border:2px solid transparent;background:var(--bg);opacity:.5;transition:opacity .3s,border-color .3s}
+.steps li .n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.78rem;background:var(--line);color:var(--ink)}
+.steps li.active{opacity:1;border-color:var(--c)}
+.steps li.done{opacity:1}
+.steps li.done .n{background:var(--c);color:var(--surface)}
+.steps li .t{font-size:.9rem}
+.tablewrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line);transition:box-shadow .4s,border-color .4s}
+.tablewrap.lit{border-color:var(--from);box-shadow:0 0 0 4px var(--from-soft)}
+table.data{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:.88rem;font-variant-numeric:tabular-nums}
+.data tr{position:relative}
+.data th,.data td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;transition:opacity .4s,background .25s,color .3s;background:var(--surface)}
+.data th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.data td.num{text-align:right}
+.data td.mark,.data th.mark{width:34px;text-align:center;padding:8px 4px;font-weight:700}
+.data tr.checking td{background:var(--where-soft)}
+.data tr.keep td.mark{color:var(--ok)}
+.data tr.drop td{opacity:.28;text-decoration:line-through}
+.data tr.drop td.mark{color:var(--bad);opacity:1;text-decoration:none}
+.data .col-drop{opacity:.18}
+.data th.col-keep{background:var(--sel-soft);color:var(--sel)}
+.data .sortcol{background:var(--ord-soft) !important;color:var(--ord);opacity:1 !important}
+.data td.rank{color:var(--ord)}
+.data tr.cut td{opacity:.25;text-decoration:line-through}
+.data tr.cut td.mark{color:var(--bad);opacity:1;text-decoration:none}
+.data tr.kept td.mark{color:var(--lim)}
+.data.result th{background:var(--sel-soft);color:var(--sel)}
+.data.result tr{animation:pop .35s ease both}
+@keyframes pop{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.count{font-weight:700;font-size:.95rem}
+.order-note{font-size:.85rem;color:var(--muted)}
+
+/* quiz */
+.quiz{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.quiz{grid-template-columns:1fr}}
+.qz{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.qz .prompt{font-weight:700}
+.qz .opts{display:flex;flex-direction:column;gap:8px}
+.qz .opts button{text-align:left;font:inherit;font-size:.95rem;padding:10px 14px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.qz .opts button.mono{font-family:var(--mono);font-size:.85rem}
+.qz .opts button:hover:not(:disabled){border-color:var(--ink)}
+.qz .opts button.right{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.qz .opts button.wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.qz .why{font-size:.92rem;color:var(--muted)}
+.score{font-family:var(--display);font-weight:800;font-size:1.2rem}
+
+/* pocket */
+.pocket{background:var(--surface);border:2px solid var(--ink);border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:16px;max-width:680px}
+.pocket .line{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;align-items:baseline;font-size:1.05rem}
+.pocket .line code{font-weight:600;font-size:1.05rem}
+.pocket hr{border:none;border-top:1px dashed var(--line);margin:0;width:100%}
+.pocket ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+footer{color:var(--muted);font-size:.9rem}
+@media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+</style>
+
+</head>
+<body>
+<main class="wrap">
+  <nav class="topnav" aria-label="Lessons"><a href="lesson-1.html">&larr; Lesson 1</a><a class="mid" href="index.html">All lessons</a><a href="lesson-3.html">Lesson 3 &rarr;</a></nav>
+
+
+  <header class="hero">
+    <span class="eyebrow">SQL Café · Lesson 2 of 8</span>
+    <h1>Please line them up, and just bring me three.</h1>
+    <div class="recap">Last time: <span class="pair"><span class="chip sel">SELECT</span> What?</span> <span class="pair"><span class="chip from">FROM</span> Where is it?</span> <span class="pair"><span class="chip where">WHERE</span> Which ones?</span> <a href="lesson-1.html">Lesson 1</a></div>
+    <p>Today you learn two new words. One puts your answer in order. The other says how many rows you want. With them you can ask for things like “the 3 cheapest drinks”.</p>
+    <div class="order">
+      <div class="bubble"><small>You say to the waiter</small>
+        “Please bring me <span class="u sel">the item and the price</span> <span class="u from">from the menu</span>, <span class="u where">only drinks</span>, <span class="u ord">cheapest first</span>, and <span class="u lim">just 3 of them</span>. Thank you!”
+      </div>
+      <div class="arrow">↓ same thing in SQL</div>
+      <div class="sqlline"><span class="k-sel">SELECT</span> item, price <span class="k-from">FROM</span> menu <span class="k-where">WHERE</span> type = 'drink' <span class="k-ord">ORDER BY</span> price <span class="k-lim">LIMIT</span> 3;</div>
+    </div>
+  </header>
+
+  <section aria-labelledby="h-two">
+    <span class="eyebrow">Two new questions</span>
+    <h2 id="h-two">In what order? How many?</h2>
+    <p>Lesson 1 gave you three questions. Today adds two more, each with its own colour.</p>
+    <div class="two">
+      <div class="q" style="--c:var(--ord);--cs:var(--ord-soft)">
+        <span class="kw">ORDER BY</span>
+        <span class="ask">In what order?</span>
+        <div class="bars" aria-hidden="true"><i style="height:20%"></i><i style="height:40%"></i><i style="height:60%"></i><i style="height:80%"></i><i style="height:100%"></i></div>
+        <span class="memo">Lines the rows up, like people in a queue</span>
+        <p>Name the column to sort by, like <code>ORDER BY price</code>. Without it, the order of the rows is not guaranteed.</p>
+      </div>
+      <div class="q" style="--c:var(--lim);--cs:var(--lim-soft)">
+        <span class="kw">LIMIT</span>
+        <span class="ask">How many?</span>
+        <div class="cups" aria-hidden="true"><i></i><i></i><i></i><i class="off"></i><i class="off"></i><i class="off"></i></div>
+        <span class="memo">Keeps only the first few rows</span>
+        <p>Give a number, like <code>LIMIT 3</code>. You get the first 3 rows and the rest are left behind.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-stairs">
+    <span class="eyebrow">Up or down?</span>
+    <h2 id="h-stairs">ASC walks up the stairs, DESC walks down</h2>
+    <p>After the column name you can add one small word to choose the direction. Think of a staircase.</p>
+    <div class="stairs">
+      <div class="stair">
+        <span class="word">ASC</span>
+        <div class="bars" aria-hidden="true"><i style="height:20%"></i><i style="height:40%"></i><i style="height:60%"></i><i style="height:80%"></i><i style="height:100%"></i></div>
+        <span><b>Ascending</b> = going <b>up</b>. Small to big. A to Z.</span>
+        <span class="eg">ORDER BY price ASC → £2.50, £3.00, £3.50 …</span>
+      </div>
+      <div class="stair">
+        <span class="word">DESC</span>
+        <div class="bars" aria-hidden="true"><i style="height:100%"></i><i style="height:80%"></i><i style="height:60%"></i><i style="height:40%"></i><i style="height:20%"></i></div>
+        <span><b>Descending</b> = going <b>down</b>. Big to small. Z to A.</span>
+        <span class="eg">ORDER BY price DESC → £5.50, £4.50, £4.00 …</span>
+      </div>
+    </div>
+    <div class="fact">
+      <div><b>Good to know:</b> if you write nothing, SQL walks <b>up</b>. <code>ORDER BY price</code> is the same as <code>ORDER BY price ASC</code>. So you only need to type <code>DESC</code> when you want biggest first.</div>
+      <div><b>Sort first, then cut:</b> imagine lining children up from shortest to tallest, then picking the first 3. You get the 3 shortest. That is why <span class="k-ord">ORDER BY</span> always comes before <span class="k-lim">LIMIT</span>. If you cut first, you would get any 3.</div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-mnemo">
+    <span class="eyebrow">The full order, in one sentence</span>
+    <h2 id="h-mnemo">Some Friendly Waiters Offer Lemonade</h2>
+    <p>Now there are five words, and they always go in the same order. The first letter of each word in this sentence gives you the order.</p>
+    <div class="mnemo">
+      <div class="words">
+        <span><b class="k-sel">S</b>ome</span><span><b class="k-from">F</b>riendly</span><span><b class="k-where">W</b>aiters</span><span><b class="k-ord">O</b>ffer</span><span><b class="k-lim">L</b>emonade</span>
+      </div>
+      <div class="map"><span class="chip sel">SELECT</span>→<span class="chip from">FROM</span>→<span class="chip where">WHERE</span>→<span class="chip ord">ORDER BY</span>→<span class="chip lim">LIMIT</span></div>
+      <p style="color:var(--muted);font-size:.95rem">You can skip WHERE, ORDER BY or LIMIT when you don't need them. But the ones you use always stay in this order.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-read">
+    <span class="eyebrow">Read the code one word at a time</span>
+    <h2 id="h-read">Every piece has a meaning</h2>
+    <p>Please press <b>Next</b> (or click any piece) and watch the sentence grow underneath. The new pieces from today are in teal and green.</p>
+    <div class="reader">
+      <div class="bigq" id="bigq" role="group" aria-label="The query, one piece at a time"></div>
+      <div class="explain">
+        <div class="ebox">
+          <span class="kind" id="r-kind"></span>
+          <span class="big" id="r-big"></span>
+          <span id="r-what"></span>
+          <span class="tip" id="r-tip"></span>
+        </div>
+        <div class="ebox">
+          <span class="kind">Say it out loud</span>
+          <span class="sayit" id="r-say" aria-live="polite"></span>
+        </div>
+      </div>
+      <div class="nav">
+        <button class="btn ghost" id="r-back" type="button">◀ Back</button>
+        <button class="btn" id="r-next" type="button">Next ▶</button>
+        <span class="progress" id="r-prog"></span>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-sym">
+    <span class="eyebrow">Today's words and symbols</span>
+    <h2 id="h-sym">Say each one out loud</h2>
+    <p>Swap each word for what you say, and the code becomes a normal sentence again.</p>
+    <div class="symwrap">
+      <table class="sym">
+        <thead><tr><th>Write</th><th>Say it as</th><th>Example</th><th>Why it's there</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="4">Putting rows in order</td></tr>
+          <tr><td class="k-ord">ORDER BY</td><td class="say">“sorted by…”</td><td><code>ORDER BY price</code></td><td>Two words that always go together. Says which column decides the order.</td></tr>
+          <tr><td class="k-ord">ASC</td><td class="say">“smallest first”</td><td><code>ORDER BY price ASC</code></td><td>Up the stairs: small to big, A to Z. This is what you get if you write nothing.</td></tr>
+          <tr><td class="k-ord">DESC</td><td class="say">“biggest first”</td><td><code>ORDER BY price DESC</code></td><td>Down the stairs: big to small, Z to A.</td></tr>
+          <tr><td class="k-sym">,</td><td class="say">“then by…”</td><td><code>ORDER BY type, price</code></td><td>Sort by type first. When two rows have the same type, sort those by price.</td></tr>
+          <tr class="grp"><td colspan="4">Choosing how many</td></tr>
+          <tr><td class="k-lim">LIMIT</td><td class="say">“only the first…”</td><td><code>LIMIT 3</code></td><td>Always the very last word. Keeps that many rows from the top.</td></tr>
+          <tr><td class="k-sym">3</td><td class="say">“three”</td><td><code>LIMIT 3</code></td><td>A whole number with no quotes, because it is a number, not text.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tipbox"><b>The comma changes its job depending on where it is.</b> After SELECT it means “and”: <code>SELECT item, price</code> shows item <i>and</i> price. After ORDER BY it means “then by”: <code>ORDER BY type, price</code> sorts by type, <i>then by</i> price when the types are the same.</div>
+    <div class="tipbox"><b>How text is sorted:</b> like a dictionary, A to Z. Numbers are sorted by size, so 9 comes before 10.</div>
+  </section>
+
+  <section aria-labelledby="h-play">
+    <span class="eyebrow">Your turn</span>
+    <h2 id="h-play">Playground: watch the rows line up</h2>
+    <p>Please type a query and press <b>Run</b>. Watch the rows slide into order, then see LIMIT keep only the first few.</p>
+    <div class="play">
+      <div class="panel">
+        <div class="mission">
+          <div class="mission-top"><span class="eyebrow">Mission</span><div class="dots" id="dots"></div></div>
+          <h3 id="m-title"></h3>
+          <div class="row"><button class="linkbtn" id="m-hint-btn" type="button">Show a hint</button><button class="linkbtn" id="m-ans-btn" type="button">Show the answer</button></div>
+          <p class="hint" id="m-hint" hidden></p>
+        </div>
+        <label for="sql" class="eyebrow">Your query</label>
+        <textarea id="sql" spellcheck="false" autocapitalize="off" autocomplete="off">SELECT item, price FROM menu WHERE type = 'drink' ORDER BY price LIMIT 3;</textarea>
+        <div class="row"><button class="btn" id="run" type="button">▶ Run</button><button class="btn ghost" id="replay" type="button">Replay slowly</button><span class="kbd">Ctrl + Enter also runs</span></div>
+        <div class="english" id="english" aria-live="polite"></div>
+        <div id="msg" aria-live="polite"></div>
+        <div>
+          <span class="eyebrow">Or try one of these</span>
+          <div class="examples" id="examples" style="margin-top:8px"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <ol class="steps" id="steps">
+          <li style="--c:var(--from)"><span class="n">1</span><span class="t"></span></li>
+          <li style="--c:var(--where)"><span class="n">2</span><span class="t"></span></li>
+          <li style="--c:var(--sel)"><span class="n">3</span><span class="t"></span></li>
+          <li style="--c:var(--ord)"><span class="n">4</span><span class="t"></span></li>
+          <li style="--c:var(--lim)"><span class="n">5</span><span class="t"></span></li>
+        </ol>
+        <div class="tablewrap" id="tw"><div id="stage"></div></div>
+        <div class="count" id="count"></div>
+        <p class="order-note">The database works in this order: <span class="k-from">FROM</span>, <span class="k-where">WHERE</span>, <span class="k-sel">SELECT</span>, <span class="k-ord">ORDER BY</span>, <span class="k-lim">LIMIT</span>. Faded columns stay until the end, so you can still sort by them.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-quiz">
+    <span class="eyebrow">Lock it in</span>
+    <h2 id="h-quiz">Five quick questions</h2>
+    <p>Answering from memory is the fastest way to make something stick. Wrong answers explain themselves, so please don't worry.</p>
+    <div class="quiz" id="quiz"></div>
+    <div class="score" id="score" aria-live="polite"></div>
+  </section>
+
+  <section aria-labelledby="h-card">
+    <span class="eyebrow">Take this with you</span>
+    <h2 id="h-card">Your pocket card</h2>
+    <p>Please take a screenshot of this card. Read it once tomorrow and once next week.</p>
+    <div class="pocket">
+      <div class="line"><code class="k-sel">SELECT</code><span><b>What</b> do you want to see?</span></div>
+      <div class="line"><code class="k-from">FROM</code><span><b>Where</b> is it?</span></div>
+      <div class="line"><code class="k-where">WHERE</code><span><b>Which ones?</b></span></div>
+      <div class="line"><code class="k-ord">ORDER BY</code><span><b>In what order?</b></span></div>
+      <div class="line"><code class="k-lim">LIMIT</code><span><b>How many?</b></span></div>
+      <hr>
+      <ul>
+        <li>Order to write them: <b>S</b>ome <b>F</b>riendly <b>W</b>aiters <b>O</b>ffer <b>L</b>emonade.</li>
+        <li><code>ASC</code> walks up (small to big, A to Z). It is the default.</li>
+        <li><code>DESC</code> walks down (big to small, Z to A).</li>
+        <li>Sort first, then cut: ORDER BY before LIMIT.</li>
+        <li>In ORDER BY, the comma means “then by”.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Next lesson: <a href="lesson-3.html"><b>Lesson 3: COUNT, SUM and AVG</b></a>, or how to ask “how many drinks do we have?” and “what is the average price?”.</footer>
+  <p class="madeby">SQL Caf&eacute; is a free course by <a href="https://masshai.com">MASSH AI</a>. Want SQL or data training for your team? <a href="https://masshai.com/#contact">Please get in touch</a>.</p>
+</main>
+
+<script>
+(function(){
+const MENU = {
+  cols:['id','item','type','price','calories'],
+  num:{id:1,price:1,calories:1},
+  rows:[
+    {id:1,item:'Espresso',type:'drink',price:2.5,calories:5},
+    {id:2,item:'Cappuccino',type:'drink',price:3.5,calories:120},
+    {id:3,item:'Iced Latte',type:'drink',price:4.5,calories:180},
+    {id:4,item:'Hot Chocolate',type:'drink',price:4,calories:310},
+    {id:5,item:'Croissant',type:'food',price:3,calories:270},
+    {id:6,item:'Bagel',type:'food',price:3.5,calories:250},
+    {id:7,item:'Carrot Cake',type:'food',price:5.5,calories:420},
+    {id:8,item:'Fruit Cup',type:'food',price:4,calories:90}
+  ]
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let speed = 1;
+const sleep = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms * speed));
+
+/* ---------- tiny SQL reader ---------- */
+function lev(a,b){const m=[];for(let i=0;i<=a.length;i++){m[i]=[i];for(let j=1;j<=b.length;j++)m[i][j]=i?Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+(a[i-1]===b[j-1]?0:1)):j}return m[a.length][b.length]}
+function suggest(w){let best=null,d=9;for(const c of MENU.cols){const x=lev(w,c);if(x<d){d=x;best=c}}return d<=2?best:null}
+function badCol(w){const s=suggest(w);return 'There is no column called "'+w+'".'+(s?' Did you mean '+s+'?':' The columns are: '+MENU.cols.join(', ')+'.')}
+const ORDER_MSG='The order is: SELECT, FROM, WHERE, ORDER BY, LIMIT (Some Friendly Waiters Offer Lemonade).';
+
+function parse(src){
+  let s = src.trim().replace(/;\s*$/,'').trim();
+  if(!s) throw Error('Please type a query first, starting with SELECT.');
+  if(!/^select\b/i.test(s)) throw Error('Please start with SELECT. It answers "What do you want to see?"');
+  if(!/\bfrom\b/i.test(s)) throw Error('Please add FROM to say which table, for example: FROM menu');
+  const masked = s.replace(/'[^']*'|"[^"]*"/g, m => '_'.repeat(m.length));
+  if(/\bsort\s+by\b/i.test(masked)) throw Error('SQL says ORDER BY, not SORT BY. Please use ORDER BY.');
+  if(/\border\b(?!\s+by\b)/i.test(masked)) throw Error('Please write ORDER BY as two words, for example: ORDER BY price');
+  if(/\b(asc|desc)\b/i.test(masked) && !/\border\s+by\b/i.test(masked)) throw Error('ASC and DESC only work after ORDER BY, for example: ORDER BY price DESC');
+  const find = re => { const m = re.exec(masked); return m ? m.index : -1; };
+  const iW = find(/\swhere\b/i), iO = find(/\sorder\s+by\b/i), iL = find(/\slimit\b/i);
+  if(iO>=0 && iW>iO) throw Error('Please put WHERE before ORDER BY. '+ORDER_MSG);
+  if(iL>=0 && iW>iL) throw Error('Please put WHERE before LIMIT. '+ORDER_MSG);
+  if(iL>=0 && iO>iL) throw Error('Please put ORDER BY before LIMIT. LIMIT always comes last: sort first, then cut.');
+  const marks=[iW,iO,iL].filter(i=>i>=0);
+  const end = i => { const later = marks.filter(x=>x>i); return later.length?Math.min(...later):s.length; };
+  const head = s.slice(0, marks.length?Math.min(...marks):s.length).trim();
+  const m = head.match(/^select\s+([\s\S]+?)\s+from\s+([A-Za-z_]\w*)\s*([\s\S]*)$/i);
+  if(!m){ if(/from\s*$/i.test(head)) throw Error('Please add a table name after FROM. Our table is menu.'); throw Error('The pattern is: SELECT columns FROM table'); }
+  if(m[3].trim()) throw Error('After FROM menu I expected WHERE, ORDER BY or LIMIT, but found "'+m[3].trim().split(/\s+/)[0]+'".');
+  if(m[2].toLowerCase()!=='menu') throw Error('There is no table called "'+m[2]+'". Our table is menu.');
+  const colPart=m[1].trim();
+  let cols, star=false;
+  if(colPart==='*'){cols=MENU.cols.slice();star=true}
+  else{
+    cols=colPart.split(',').map(x=>x.trim().toLowerCase());
+    if(cols.some(c=>!c)) throw Error('There is an extra comma in your column list. Commas go between column names only.');
+    for(const c of cols){ if(c==='*') throw Error('Please use * on its own, not mixed with column names.'); if(/\s/.test(c)) throw Error('"'+c+'" looks like two words. Did you forget a comma between columns?'); if(!MENU.cols.includes(c)) throw Error(badCol(c)); }
+  }
+  let where=null, whereSrc='', order=null, orderSrc='', limit=null;
+  if(iW>=0){
+    whereSrc=s.slice(iW,end(iW)).replace(/^\s*where\b\s*/i,'').trim();
+    if(!whereSrc) throw Error('WHERE needs a test after it, like: WHERE price < 4');
+    where=parseWhere(whereSrc);
+  }
+  if(iO>=0){
+    orderSrc=s.slice(iO,end(iO)).replace(/^\s*order\s+by\s*/i,'').trim();
+    if(!orderSrc) throw Error('Please say which column to sort by, like: ORDER BY price');
+    order=orderSrc.split(',').map(p=>{
+      const t=p.trim(); if(!t) throw Error('There is an extra comma after ORDER BY. Commas go between column names only.');
+      const om=t.match(/^([A-Za-z_]\w*)(?:\s+(\w+))?$/);
+      if(!om) throw Error('After ORDER BY, please write a column name and, if you like, ASC or DESC.');
+      const col=om[1].toLowerCase();
+      if(!MENU.cols.includes(col)) throw Error(badCol(col));
+      let dir='asc';
+      if(om[2]){ const d=om[2].toLowerCase(); if(d!=='asc'&&d!=='desc') throw Error('After "'+om[1]+'" you can only write ASC or DESC. Did you forget a comma?'); dir=d; }
+      return {col,dir};
+    });
+  }
+  if(iL>=0){
+    const v=s.slice(iL).replace(/^\s*limit\s*/i,'').trim();
+    if(!v) throw Error('Please add a number after LIMIT, like: LIMIT 3');
+    if(!/^\d+$/.test(v)) throw Error('LIMIT needs a whole number with no quotes, like: LIMIT 3');
+    limit=parseInt(v,10);
+  }
+  return {cols, star, where, whereSrc, order, orderSrc, limit};
+}
+function tokenize(s){
+  const re=/\s*('[^']*'|"[^"]*"|<=|>=|!=|<>|=|<|>|-?\d+(?:\.\d+)?|[A-Za-z_]\w*)/y; const out=[];
+  re.lastIndex=0;
+  while(re.lastIndex<s.length){
+    const start=re.lastIndex; const m=re.exec(s);
+    if(!m){ const bad=s.slice(start).trim(); if(!bad) break;
+      if(bad[0]==="'"||bad[0]==='"') throw Error('A quote was opened but never closed. Text needs a quote on both sides: \'drink\'');
+      throw Error('I don\'t understand "'+bad.slice(0,12)+'" in your WHERE test.'); }
+    out.push(m[1]);
+  }
+  return out;
+}
+function parseWhere(s){
+  const t=tokenize(s); let i=0; const groups=[[]];
+  const OPS=['=','!=','<>','<','>','<=','>='];
+  while(true){
+    const col=t[i++];
+    if(!col) throw Error('WHERE needs a full test, like: price < 4');
+    const lc=col.toLowerCase();
+    if(!/^[A-Za-z_]/.test(col)) throw Error('A test starts with a column name, like: price < 4');
+    if(!MENU.cols.includes(lc)) throw Error(badCol(lc));
+    let op=t[i++];
+    if(!op) throw Error('After "'+col+'" please add a comparison, like = or <');
+    if(op.toLowerCase()==='like') op='like';
+    else if(!OPS.includes(op)) throw Error('"'+op+'" is not a comparison. Please use = != < > <= or >=');
+    const v=t[i++];
+    if(v===undefined) throw Error('Please finish the test: '+col+' '+op+' ... what?');
+    let val;
+    if(/^['"]/.test(v)) val=v.slice(1,-1);
+    else if(/^-?\d/.test(v)) val=parseFloat(v);
+    else if(MENU.cols.includes(v.toLowerCase())) throw Error('This lesson compares a column with a value. Please write a value after the comparison, like: price < 4');
+    else throw Error('Text needs quotes: please write \''+v+'\' instead of '+v+'.');
+    groups[groups.length-1].push({col:lc,op,val});
+    const j=t[i];
+    if(j===undefined) break;
+    const jl=j.toLowerCase();
+    if(jl==='and'){i++} else if(jl==='or'){i++;groups.push([])}
+    else throw Error('Please join two tests with AND or OR. I found "'+j+'".');
+  }
+  return groups;
+}
+function test(row,c){
+  let a=row[c.col], b=c.val;
+  if(MENU.num[c.col] && typeof b==='string' && b.trim()!=='' && !isNaN(b)) b=parseFloat(b);
+  if(c.op==='like'){ const re=new RegExp('^'+String(b).replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/%/g,'.*').replace(/_/g,'.')+'$','i'); return re.test(String(a)); }
+  if(typeof a==='string'){a=a.toLowerCase(); b=String(b).toLowerCase();}
+  switch(c.op){case '=':return a===b;case '!=':case '<>':return a!==b;case '<':return a<b;case '>':return a>b;case '<=':return a<=b;case '>=':return a>=b}
+  return false;
+}
+const passes=(row,where)=>!where||where.some(g=>g.every(c=>test(row,c)));
+function cmp(a,b,order){
+  for(const o of order){
+    let x=a[o.col], y=b[o.col], r;
+    if(typeof x==='string') r=x.localeCompare(y,undefined,{sensitivity:'base'}); else r=x-y;
+    if(r) return o.dir==='desc'?-r:r;
+  }
+  return 0;
+}
+function execute(q){
+  let rows=MENU.rows.filter(r=>passes(r,q.where));
+  const sorted=q.order?rows.slice().sort((a,b)=>cmp(a,b,q.order)):rows.slice();
+  const final=q.limit!==null?sorted.slice(0,q.limit):sorted;
+  return {filtered:rows, sorted, final};
+}
+
+/* ---------- plain English ---------- */
+const OPW={'=':'is','!=':'is not','<>':'is not','<':'is less than','>':'is more than','<=':'is at most','>=':'is at least','like':'looks like'};
+function list(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1]}
+function whereWords(where){return where.map(g=>g.map(c=>c.col+' '+OPW[c.op]+' '+(typeof c.val==='string'?'“'+esc(c.val)+'”':c.val)).join(' <b>and</b> ')).join(' <b>or</b> ')}
+function dirWords(o){ const text=!MENU.num[o.col]; return o.dir==='desc'?(text?'Z to A':'biggest first'):(text?'A to Z':'smallest first'); }
+function english(q){
+  let s='Please show me <span class="k-sel">'+(q.star?'every column':list(q.cols))+'</span> <span class="k-from">from the menu</span>';
+  if(q.where) s+=' <span class="k-where">where '+whereWords(q.where)+'</span>';
+  if(q.order) s+=', <span class="k-ord">sorted by '+q.order.map((o,i)=>(i?'then by ':'')+o.col+' ('+dirWords(o)+')').join(', ')+'</span>';
+  if(q.limit!==null) s+=', <span class="k-lim">only the first '+q.limit+'</span>';
+  return '<span class="lbl">In plain English</span>'+s+'.';
+}
+
+/* ---------- animated run ---------- */
+const stage=$('#stage'), tw=$('#tw'), steps=[...document.querySelectorAll('#steps li')];
+let runId=0;
+function cell(col,v){return '<td data-col="'+col+'"'+(MENU.num[col]?' class="num"':'')+'>'+(col==='price'?'£'+v.toFixed(2):esc(v))+'</td>'}
+function setStep(i,state,html){steps[i].className=state; if(html!==undefined) steps[i].querySelector('.t').innerHTML=html}
+function resetSteps(){
+  setStep(0,'','<span class="chip from">FROM</span> Open the table');
+  setStep(1,'','<span class="chip where">WHERE</span> Keep the rows that pass');
+  setStep(2,'','<span class="chip sel">SELECT</span> Pick the columns');
+  setStep(3,'','<span class="chip ord">ORDER BY</span> Line the rows up');
+  setStep(4,'','<span class="chip lim">LIMIT</span> Keep only the first few');
+}
+function drawFull(){
+  let h='<table class="data"><thead><tr><th class="mark"></th>'+MENU.cols.map(c=>'<th data-col="'+c+'">'+c+'</th>').join('')+'</tr></thead><tbody>';
+  for(const r of MENU.rows) h+='<tr data-id="'+r.id+'"><td class="mark"></td>'+MENU.cols.map(c=>cell(c,r[c])).join('')+'</tr>';
+  stage.innerHTML=h+'</tbody></table>';
+}
+function drawResult(q,rows){
+  if(!rows.length){stage.innerHTML='<p style="padding:20px;color:var(--muted)">No rows are left, so the answer is empty. That is a real answer too!</p>';return}
+  const arrow=c=>{ if(!q.order) return ''; const o=q.order.find(x=>x.col===c); return o?(o.dir==='desc'?' ↓':' ↑'):''; };
+  let h='<table class="data result"><thead><tr>'+q.cols.map(c=>'<th>'+c+arrow(c)+'</th>').join('')+'</tr></thead><tbody>';
+  rows.forEach((r,i)=>{h+='<tr style="animation-delay:'+(i*40)+'ms">'+q.cols.map(c=>cell(c,r[c])).join('')+'</tr>'});
+  stage.innerHTML=h+'</tbody></table>';
+}
+async function animate(q,res){
+  const id=++runId; const alive=()=>id===runId;
+  resetSteps(); drawFull(); tw.classList.remove('lit'); $('#count').textContent='';
+  await sleep(200); if(!alive())return;
+  setStep(0,'active','<span class="chip from">FROM menu</span> Open the menu table: 8 rows.');
+  tw.classList.add('lit'); await sleep(800); if(!alive())return;
+  setStep(0,'done'); tw.classList.remove('lit');
+
+  const trs=[...stage.querySelectorAll('tbody tr')];
+  const byId={}; trs.forEach(t=>byId[t.dataset.id]=t);
+  if(q.where){
+    setStep(1,'active','<span class="chip where">WHERE '+esc(q.whereSrc)+'</span> Testing each row…');
+    for(const tr of trs){
+      const row=MENU.rows.find(r=>r.id==tr.dataset.id);
+      tr.classList.add('checking'); await sleep(240); if(!alive())return;
+      tr.classList.remove('checking');
+      const ok=passes(row,q.where);
+      tr.classList.add(ok?'keep':'drop'); tr.querySelector('.mark').textContent=ok?'✓':'✗';
+    }
+    await sleep(600); if(!alive())return;
+    trs.forEach(tr=>{if(tr.classList.contains('drop'))tr.hidden=true});
+    setStep(1,'done','<span class="chip where">WHERE '+esc(q.whereSrc)+'</span> '+res.filtered.length+' of 8 rows passed.');
+  } else setStep(1,'done','<span class="chip where">no WHERE</span> No test, so all 8 rows stay.');
+
+  setStep(2,'active','<span class="chip sel">SELECT '+(q.star?'*':esc(q.cols.join(', ')))+'</span> '+(q.star?'Every column stays.':'Fade the other columns.'));
+  stage.querySelectorAll('[data-col]').forEach(el=>{
+    if(q.cols.includes(el.dataset.col)){ if(el.tagName==='TH') el.classList.add('col-keep') } else el.classList.add('col-drop');
+  });
+  await sleep(800); if(!alive())return;
+  setStep(2,'done');
+
+  const vis=trs.filter(t=>!t.hidden);
+  if(q.order){
+    setStep(3,'active','<span class="chip ord">ORDER BY '+esc(q.orderSrc)+'</span> Lining the rows up, '+esc(dirWords(q.order[0]))+'…');
+    const sc=q.order[0].col;
+    stage.querySelectorAll('[data-col="'+sc+'"]').forEach(el=>el.classList.add('sortcol'));
+    await sleep(700); if(!alive())return;
+    const first=new Map(vis.map(t=>[t,t.getBoundingClientRect().top]));
+    const tbody=stage.querySelector('tbody');
+    res.sorted.forEach(r=>tbody.appendChild(byId[r.id]));
+    vis.forEach(t=>{const d=first.get(t)-t.getBoundingClientRect().top; t.style.transition='none'; t.style.transform='translateY('+d+'px)'});
+    void tbody.offsetHeight;
+    vis.forEach(t=>{t.style.transition='transform .8s cubic-bezier(.2,.7,.2,1)'; t.style.transform=''});
+    await sleep(900); if(!alive())return;
+    res.sorted.forEach((r,i)=>{const m=byId[r.id].querySelector('.mark'); m.textContent=i+1; m.classList.add('rank')});
+    setStep(3,'done','<span class="chip ord">ORDER BY '+esc(q.orderSrc)+'</span> Rows are now in line, numbered 1, 2, 3…');
+    await sleep(500); if(!alive())return;
+  } else setStep(3,'done','<span class="chip ord">no ORDER BY</span> Order is not guaranteed.');
+
+  if(q.limit!==null){
+    setStep(4,'active','<span class="chip lim">LIMIT '+q.limit+'</span> Keep the first '+q.limit+', leave the rest.');
+    res.sorted.forEach((r,i)=>{const tr=byId[r.id]; if(i<q.limit){tr.classList.add('kept')} else {tr.classList.add('cut'); tr.querySelector('.mark').textContent='✗'}});
+    await sleep(1000); if(!alive())return;
+    setStep(4,'done');
+  } else setStep(4,'done','<span class="chip lim">no LIMIT</span> You get every row that is left.');
+  await sleep(300); if(!alive())return;
+  drawResult(q,res.final);
+  $('#count').innerHTML='Answer: <span class="k-sel">'+res.final.length+' row'+(res.final.length===1?'':'s')+'</span> × <span class="k-sel">'+q.cols.length+' column'+(q.cols.length===1?'':'s')+'</span>';
+}
+
+/* ---------- missions ---------- */
+const MISSIONS=[
+  {title:'Please show the item and price of everything, cheapest first.', rows:[1,2,3,4,5,6,7,8], key:[{col:'price',dir:'asc'}], cols:['item','price'], exact:true,
+   hint:'No WHERE needed. ORDER BY price already goes smallest first.', answer:'SELECT item, price FROM menu ORDER BY price;'},
+  {title:'Please show every item name in alphabetical order, A to Z.', rows:[1,2,3,4,5,6,7,8], key:[{col:'item',dir:'asc'}], cols:['item'], exact:false,
+   hint:'Text sorts like a dictionary. Sort by the item column.', answer:'SELECT item FROM menu ORDER BY item;'},
+  {title:'Please show the 2 cheapest drinks.', rows:[1,2], key:[{col:'price',dir:'asc'}], cols:['item'], exact:false,
+   hint:'You need WHERE for the drinks, ORDER BY price, then LIMIT 2.', answer:"SELECT item, price FROM menu WHERE type = 'drink' ORDER BY price LIMIT 2;"},
+  {title:'Please show the item and calories of the 3 most filling things (the most calories).', rows:[7,4,5], key:[{col:'calories',dir:'desc'}], cols:['item','calories'], exact:true,
+   hint:'Most calories first means walking down the stairs: DESC.', answer:'SELECT item, calories FROM menu ORDER BY calories DESC LIMIT 3;'}
+];
+let cur=0; const won=new Set();
+try{ JSON.parse(localStorage.getItem('sqlcafe2-won')||'[]').forEach(i=>won.add(i)) }catch(e){}
+function saveWon(){ try{ localStorage.setItem('sqlcafe2-won',JSON.stringify([...won])) }catch(e){} }
+function drawMission(){
+  const m=MISSIONS[cur];
+  $('#m-title').textContent=m.title;
+  $('#m-hint').hidden=true; $('#m-hint').textContent='';
+  $('#dots').innerHTML=MISSIONS.map((_,i)=>'<button type="button" aria-label="Mission '+(i+1)+(won.has(i)?' (done)':'')+'" class="'+(i===cur?'cur ':'')+(won.has(i)?'won':'')+'" data-i="'+i+'">'+(won.has(i)?'✓':i+1)+'</button>').join('');
+}
+$('#dots').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cur=+b.dataset.i;drawMission();$('#msg').innerHTML=''});
+$('#m-hint-btn').onclick=()=>{const h=$('#m-hint');h.hidden=false;h.textContent='Hint: '+MISSIONS[cur].hint};
+$('#m-ans-btn').onclick=()=>{const h=$('#m-hint');h.hidden=false;h.innerHTML='Answer: <code>'+esc(MISSIONS[cur].answer)+'</code>. Please type it in yourself, as typing helps you remember.'};
+function check(q,rows){
+  const m=MISSIONS[cur];
+  const gotSet=rows.map(r=>r.id).sort((a,b)=>a-b).join(','), wantSet=m.rows.slice().sort((a,b)=>a-b).join(',');
+  let inOrder=true; for(let i=1;i<rows.length;i++) if(cmp(rows[i-1],rows[i],m.key)>0) inOrder=false;
+  const colsOk=m.exact?(q.cols.length===m.cols.length&&m.cols.every(c=>q.cols.includes(c))):m.cols.every(c=>q.cols.includes(c));
+  const say=h=>$('#msg').innerHTML=h;
+  if(gotSet===wantSet && inOrder && colsOk){
+    won.add(cur); saveWon();
+    const next=MISSIONS.map((_,k)=>(cur+1+k)%MISSIONS.length).find(i=>!won.has(i)) ?? -1;
+    say('<div class="msg win">Mission '+(cur+1)+' done! '+(next<0?'You finished all four. Well done!':'On to the next one.')+'</div>');
+    if(next>=0) cur=next; drawMission();
+  } else if(gotSet===wantSet && colsOk){
+    say('<div class="msg near">Right rows, but the order is not quite right yet. Please check your <span class="k-ord">ORDER BY</span>, and whether you need ASC or DESC.</div>');
+  } else if(gotSet===wantSet){
+    say('<div class="msg near">Right rows! Now please fix your <span class="k-sel">SELECT</span>: this mission wants '+list(m.cols)+(m.exact?' and nothing else.':'.')+'</div>');
+  } else if(rows.length>m.rows.length){
+    say('<div class="msg near">You got '+rows.length+' rows, but this mission wants '+m.rows.length+'. Do you need a <span class="k-where">WHERE</span> or a <span class="k-lim">LIMIT</span>?</div>');
+  } else {
+    say('<div class="msg near">Not quite yet. This mission wants '+m.rows.length+' rows showing '+list(m.cols)+'. Would a hint help?</div>');
+  }
+}
+
+/* ---------- wiring ---------- */
+const ta=$('#sql');
+function run(slow){
+  speed=slow?1.8:1;
+  let q; try{ q=parse(ta.value) }catch(e){ runId++; $('#msg').innerHTML='<div class="msg err">'+esc(e.message)+'</div>'; return }
+  $('#english').innerHTML=english(q);
+  const res=execute(q);
+  $('#msg').innerHTML='';
+  const my=runId+1;
+  animate(q,res).then(()=>{ if(!slow && runId===my) check(q,res.final) });
+}
+$('#run').onclick=()=>run(false);
+$('#replay').onclick=()=>run(true);
+ta.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();run(false)}});
+ta.addEventListener('input',()=>{try{$('#english').innerHTML=english(parse(ta.value))}catch(e){}});
+const EX=["SELECT item, price FROM menu ORDER BY price;","SELECT item, price FROM menu ORDER BY price DESC;","SELECT item FROM menu ORDER BY item;","SELECT item, type, price FROM menu ORDER BY type, price;","SELECT item, calories FROM menu ORDER BY calories DESC LIMIT 3;","SELECT item, price FROM menu WHERE type = 'food' ORDER BY price LIMIT 1;"];
+$('#examples').innerHTML=EX.map(x=>'<button type="button">'+esc(x)+'</button>').join('');
+$('#examples').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ta.value=b.textContent;run(false)});
+resetSteps(); drawFull(); $('#english').innerHTML=english(parse(ta.value)); drawMission();
+
+/* ---------- word-by-word reader ---------- */
+const READ=[
+  {t:'SELECT',c:'sel',kind:'Main word',what:'Means “please show me”. You know this one from Lesson 1.',tip:'It answers: What do you want to see?',say:'Please show me'},
+  {t:'item',c:'name',kind:'Column name',what:'The name of each thing on the menu.',tip:'Column names have no quotes.',say:'the item'},
+  {t:',',j:1,c:'sym',kind:'Comma',what:'After SELECT, a comma means “and”.',tip:'Watch out: later today a comma means something else.',say:'and'},
+  {t:'price',c:'name',kind:'Column name',what:'The second column we want to see.',tip:'',say:'the price'},
+  {t:'FROM',c:'from',kind:'Main word',what:'Says where the data lives.',tip:'It answers: Where is it?',say:'from the'},
+  {t:'menu',c:'name',kind:'Table name',what:'Our one table.',tip:'',say:'menu,'},
+  {t:'ORDER BY',c:'ord',kind:'New main word',what:'Means “sorted by”. It lines the rows up using one column.',tip:'It answers: In what order? ORDER and BY always go together.',say:'sorted by'},
+  {t:'price',c:'name',kind:'Column name',what:'The column that decides the order. Rows are lined up by their price.',tip:'You can sort by any column, even one you did not SELECT.',say:'price,'},
+  {t:'DESC',c:'ord',kind:'Direction',what:'Short for “descending”: walking down the stairs. Biggest first.',tip:'Leave it out (or write ASC) to get smallest first.',say:'biggest first,'},
+  {t:'LIMIT',c:'lim',kind:'New main word',what:'Means “only the first…”. It always comes last.',tip:'It answers: How many?',say:'and only the first'},
+  {t:'3',c:'name',kind:'A number',what:'How many rows to keep, counted from the top.',tip:'A whole number with no quotes.',say:'3'},
+  {t:';',j:1,c:'sym',kind:'Semicolon',what:'The full stop. “My question is finished.”',tip:'Read it as “Done.”',say:'. Done!'}
+];
+let rStep=0;
+const bigq=$('#bigq');
+bigq.innerHTML=READ.map((r,i)=>'<button type="button" class="tok t-'+r.c+(r.j?' join':'')+'" data-i="'+i+'" aria-label="'+esc(r.kind+': '+r.t)+'">'+esc(r.t)+'</button>').join('');
+const toks=[...bigq.querySelectorAll('.tok')];
+function drawReader(){
+  const r=READ[rStep];
+  toks.forEach((el,i)=>{el.classList.toggle('seen',i<=rStep);el.classList.toggle('on',i===rStep)});
+  $('#r-kind').textContent=r.kind;
+  const big=$('#r-big'); big.textContent=r.t; big.className='big k-'+r.c;
+  $('#r-what').textContent=r.what; $('#r-tip').textContent=r.tip;
+  let s=''; READ.slice(0,rStep+1).forEach((x,i)=>{const w=esc(x.say); const sep=(i===0||/^[.,]/.test(x.say))?'':' '; s+=sep+(i===rStep?'<span class="new">'+w+'</span>':w)});
+  $('#r-say').innerHTML='“'+s+(rStep===READ.length-1?'':' …')+'”';
+  $('#r-prog').textContent='Piece '+(rStep+1)+' of '+READ.length;
+  $('#r-back').disabled=rStep===0;
+  $('#r-next').textContent=rStep===READ.length-1?'Start again ↺':'Next ▶';
+}
+$('#r-next').onclick=()=>{rStep=rStep===READ.length-1?0:rStep+1;drawReader()};
+$('#r-back').onclick=()=>{if(rStep>0){rStep--;drawReader()}};
+bigq.addEventListener('click',e=>{const b=e.target.closest('.tok');if(!b)return;rStep=+b.dataset.i;drawReader()});
+drawReader();
+
+/* ---------- quiz ---------- */
+const QUIZ=[
+  {p:'Which words put the rows in order?',o:['LIMIT','ORDER BY','WHERE'],a:1,why:'ORDER BY answers “In what order?” It lines the rows up.'},
+  {p:'What do you get from ORDER BY price DESC?',o:['Cheapest first','Most expensive first','Only the expensive ones'],a:1,why:'DESC walks down the stairs: biggest first.'},
+  {p:'You write ORDER BY price with nothing after it. What happens?',o:['Smallest first (ASC)','Biggest first (DESC)','You get an error'],a:0,why:'If you say nothing, SQL walks up the stairs. ASC is the default.'},
+  {p:'Which query is in the right order?',o:['SELECT item FROM menu LIMIT 3 ORDER BY price','SELECT item FROM menu ORDER BY price LIMIT 3','LIMIT 3 SELECT item FROM menu ORDER BY price'],a:1,mono:1,why:'Some Friendly Waiters Offer Lemonade: ORDER BY comes before LIMIT. Sort first, then cut.'},
+  {p:'In ORDER BY type, price … what does the comma mean?',o:['“and”: show type and price','“then by”: sort by type, then by price','It ends the query'],a:1,why:'After ORDER BY, the comma means “then by”. When two rows have the same type, price decides.'}
+];
+let right=0, answered=0;
+$('#quiz').innerHTML=QUIZ.map((q,i)=>'<div class="qz" data-q="'+i+'"><span class="eyebrow">Question '+(i+1)+'</span><span class="prompt">'+esc(q.p)+'</span><div class="opts">'+q.o.map((o,j)=>'<button type="button" class="'+(q.mono?'mono':'')+'" data-j="'+j+'">'+esc(o)+'</button>').join('')+'</div><p class="why" hidden></p></div>').join('');
+$('#quiz').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b||b.disabled)return;
+  const box=b.closest('.qz'), q=QUIZ[+box.dataset.q], j=+b.dataset.j;
+  box.querySelectorAll('button').forEach((x,k)=>{x.disabled=true; if(k===q.a)x.classList.add('right')});
+  if(j!==q.a)b.classList.add('wrong'); else right++;
+  answered++;
+  const w=box.querySelector('.why'); w.hidden=false; w.textContent=(j===q.a?'Yes! ':'Not this time. ')+q.why;
+  if(answered===QUIZ.length) $('#score').textContent='You got '+right+' of '+QUIZ.length+'. '+(right===QUIZ.length?'Perfect. You know Lesson 2.':'Please come back tomorrow and try again. Each try makes it stick.');
+});
+})();
+</script>
+
+</body>
+</html>

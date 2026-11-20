@@ -1,0 +1,1031 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="SQL Cafe Lesson 4: GROUP BY and HAVING, making piles and squashing each pile.">
+<link rel="canonical" href="https://learn.masshai.com/lesson-4.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%234263EB%27/%3E%3Cpath d=%27M16 24h26v14a10 10 0 0 1-10 10h-6a10 10 0 0 1-10-10z%27 fill=%27white%27/%3E%3Cpath d=%27M42 28h4a5 5 0 0 1 0 10h-4%27 stroke=%27white%27 stroke-width=%274%27 fill=%27none%27/%3E%3C/svg%3E">
+<style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}.topnav{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:.9rem;font-weight:700;margin-bottom:-40px}.topnav a{color:var(--sel);text-decoration:none}.topnav a:hover{text-decoration:underline}.topnav .mid{color:var(--muted)}.madeby{margin-top:-40px;padding-top:18px;border-top:1px dashed var(--line);color:var(--muted);font-size:.9rem;max-width:none}.madeby a{color:var(--sel)}</style>
+<title>SQL Café Lesson 4</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: same reading column as Lessons 1 to 3. Every keyword keeps its colour; today's two words (GROUP BY and HAVING) share one new colour, grape, because both are about piles. */
+:root{
+  --bg:#F3F6FC; --surface:#FFFFFF; --ink:#1A2340; --muted:#56617F; --line:#DCE3F0; --band:#E6ECFA;
+  --sel:#4263EB; --sel-soft:#E5EAFF;
+  --from:#E07A00; --from-soft:#FFF0DC;
+  --where:#D6336C; --where-soft:#FFE3EC;
+  --ord:#0C8599; --ord-soft:#DDF6FA;
+  --lim:#5C940D; --lim-soft:#EBF7D6;
+  --agg:#A16207; --agg-soft:#FEF3C7;
+  --grp:#9C36B5; --grp-soft:#F8E8FC;
+  --sym:#7048E8; --sym-soft:#EFE9FF;
+  --ok:#0B8A64; --ok-soft:#DCF5EC; --bad:#C92A2A; --bad-soft:#FFE3E3;
+  --paper:#FFFDF7;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10142A; --surface:#181E3A; --ink:#E8ECFA; --muted:#A0A9C9; --line:#2A3358; --band:#1C2448;
+  --sel:#8DA2FF; --sel-soft:#232E63; --from:#FFB04D; --from-soft:#3D2A10;
+  --where:#FF7BA6; --where-soft:#45182B; --ord:#3BC9DB; --ord-soft:#0F3A42; --lim:#A9E34B; --lim-soft:#2A3A12;
+  --agg:#FCC419; --agg-soft:#3B3010; --grp:#E599F7; --grp-soft:#3A1F45; --sym:#B39CFF; --sym-soft:#2D2360;
+  --ok:#4FD6A5; --ok-soft:#123A30; --bad:#FF8787; --bad-soft:#451C1C; --paper:#1F2547;
+  color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#10142A; --surface:#181E3A; --ink:#E8ECFA; --muted:#A0A9C9; --line:#2A3358; --band:#1C2448;
+  --sel:#8DA2FF; --sel-soft:#232E63; --from:#FFB04D; --from-soft:#3D2A10;
+  --where:#FF7BA6; --where-soft:#45182B; --ord:#3BC9DB; --ord-soft:#0F3A42; --lim:#A9E34B; --lim-soft:#2A3A12;
+  --agg:#FCC419; --agg-soft:#3B3010; --grp:#E599F7; --grp-soft:#3A1F45; --sym:#B39CFF; --sym-soft:#2D2360;
+  --ok:#4FD6A5; --ok-soft:#123A30; --bad:#FF8787; --bad-soft:#451C1C; --paper:#1F2547;
+  color-scheme:dark }
+
+*{box-sizing:border-box;font-variant-ligatures:none}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:40px 80px;display:flex;flex-direction:column;gap:72px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:clamp(2.2rem,6vw,3.6rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(1.6rem,4vw,2.2rem);font-weight:800}
+h3{font-size:1.25rem;font-weight:600}
+p{margin:0;max-width:65ch}
+a{color:var(--sel)}
+.eyebrow{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:20px}
+code,.mono{font-family:var(--mono)}
+.k-sel{color:var(--sel);font-weight:700}
+.k-from{color:var(--from);font-weight:700}
+.k-where{color:var(--where);font-weight:700}
+.k-ord{color:var(--ord);font-weight:700}
+.k-lim{color:var(--lim);font-weight:700}
+.k-agg{color:var(--agg);font-weight:700}
+.k-grp{color:var(--grp);font-weight:700}
+.k-sym{color:var(--sym);font-weight:700}
+.chip{display:inline-block;font-family:var(--mono);font-weight:600;font-size:.82rem;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.chip.sel{background:var(--sel-soft);color:var(--sel)}
+.chip.from{background:var(--from-soft);color:var(--from)}
+.chip.where{background:var(--where-soft);color:var(--where)}
+.chip.ord{background:var(--ord-soft);color:var(--ord)}
+.chip.lim{background:var(--lim-soft);color:var(--lim)}
+.chip.agg{background:var(--agg-soft);color:var(--agg)}
+.chip.grp{background:var(--grp-soft);color:var(--grp)}
+.chip.sym{background:var(--sym-soft);color:var(--sym)}
+
+/* hero */
+.hero{display:flex;flex-direction:column;gap:22px;background:var(--band);border-radius:24px;padding:clamp(20px,4vw,40px)}
+.recap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.92rem;color:var(--muted)}
+.order{display:flex;flex-direction:column;gap:14px;margin-top:6px}
+.bubble{background:var(--surface);border:1px solid var(--line);border-radius:18px 18px 18px 4px;padding:18px 22px;font-size:clamp(1.1rem,2.6vw,1.4rem);max-width:720px;line-height:1.7}
+.bubble small{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.u{border-bottom:3px solid;padding-bottom:1px}
+.u.agg{border-color:var(--agg)} .u.grp{border-color:var(--grp)} .u.sel{border-color:var(--sel)}
+.arrow{font-family:var(--mono);color:var(--muted);padding-left:22px}
+.sqlline{font-family:var(--mono);font-size:clamp(.95rem,2.3vw,1.2rem);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 22px;max-width:720px;line-height:1.7}
+
+/* piles picture */
+.piles{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:16px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px}
+@media (max-width:760px){.piles{grid-template-columns:1fr;justify-items:center;text-align:center}.piles .big-arrow{transform:rotate(90deg)}}
+.pcol{display:flex;flex-direction:column;gap:8px;align-items:center}
+.pcol .cap{font-size:.9rem;color:var(--muted);text-align:center}
+.bars{display:flex;flex-direction:column;gap:4px}
+.bars i{display:block;width:130px;height:14px;border-radius:4px;font-style:normal}
+.bars i.d{background:var(--grp)}
+.bars i.f{background:transparent;box-shadow:inset 0 0 0 2px var(--grp)}
+.pilepair{display:flex;gap:14px}
+.outrow{display:flex;flex-direction:column;gap:6px}
+.outrow span{font-family:var(--mono);font-size:.85rem;padding:6px 12px;border-radius:8px;display:flex;justify-content:space-between;gap:16px;min-width:150px}
+.outrow .d{background:var(--grp);color:var(--surface)}
+.outrow .f{box-shadow:inset 0 0 0 2px var(--grp);color:var(--grp)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);justify-content:center}
+.legend i{display:inline-block;width:22px;height:12px;border-radius:3px;vertical-align:middle;margin-right:6px}
+.big-arrow{font-family:var(--display);font-weight:800;font-size:2rem;color:var(--grp)}
+.fact{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+.fact b{font-family:var(--display)}
+
+/* rule cards */
+.rule{background:var(--grp-soft);border:2px solid var(--grp);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:14px}
+.rule .big{font-family:var(--display);font-weight:800;font-size:clamp(1.2rem,3vw,1.5rem);line-height:1.25}
+.eg{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:start;background:var(--surface);border-radius:12px;padding:12px 14px}
+.eg .mk{font-weight:800;font-size:1.2rem;line-height:1.3}
+.eg .mk.y{color:var(--ok)} .eg .mk.n{color:var(--bad)}
+.eg code{font-size:.95rem;overflow-wrap:anywhere}
+.eg p{font-size:.92rem;color:var(--muted);margin-top:4px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:720px){.two{grid-template-columns:1fr}}
+.q{background:var(--cs);border:2px solid var(--c);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:10px}
+.q .kw{font-family:var(--mono);font-weight:600;font-size:1.5rem;color:var(--c)}
+.q .ask{font-family:var(--display);font-weight:800;font-size:1.3rem;line-height:1.15}
+.q p{color:var(--muted);font-size:.95rem}
+.q code.ex{background:var(--surface);padding:6px 10px;border-radius:8px;font-size:.9rem;overflow-wrap:anywhere}
+.memo{font-size:.9rem;font-weight:700;color:var(--c)}
+
+.mnemo{background:var(--surface);border:2px solid var(--ink);border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:14px}
+.mnemo .words{display:flex;flex-wrap:wrap;gap:8px 16px;font-family:var(--display);font-weight:800;font-size:clamp(1.3rem,3.6vw,2rem);line-height:1.1}
+.mnemo .words span b{font-size:1.15em}
+.mnemo .map{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* reader */
+.reader{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:clamp(18px,3vw,28px);display:flex;flex-direction:column;gap:18px}
+.bigq{font-family:var(--mono);font-size:clamp(1.05rem,3.2vw,1.6rem);display:flex;flex-wrap:wrap;gap:6px 2px;align-items:baseline;line-height:1.5}
+.tok{padding:2px 5px;border-radius:8px;cursor:pointer;border:2px solid transparent;background:none;font:inherit;color:inherit;opacity:.3;transition:opacity .25s,background .25s,border-color .25s}
+.tok.join{margin-left:-11px}
+.tok.seen{opacity:1}
+.tok.on{opacity:1;border-color:currentColor;background:var(--ts)}
+.tok.t-sel{color:var(--sel);--ts:var(--sel-soft);font-weight:600}
+.tok.t-from{color:var(--from);--ts:var(--from-soft);font-weight:600}
+.tok.t-agg{color:var(--agg);--ts:var(--agg-soft);font-weight:600}
+.tok.t-grp{color:var(--grp);--ts:var(--grp-soft);font-weight:600}
+.tok.t-sym{color:var(--sym);--ts:var(--sym-soft);font-weight:600}
+.tok.t-name{color:var(--ink);--ts:var(--band)}
+.explain{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:700px){.explain{grid-template-columns:1fr}}
+.ebox{background:var(--bg);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.ebox .big{font-family:var(--mono);font-size:1.6rem;font-weight:600}
+.ebox .kind{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:var(--muted)}
+.ebox .tip{font-size:.92rem;color:var(--muted)}
+.sayit{font-size:clamp(1.05rem,2.6vw,1.3rem);font-weight:700;line-height:1.4}
+.sayit .new{background:var(--sym-soft);color:var(--sym);border-radius:6px;padding:0 4px}
+.reader .nav{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.progress{font-size:.85rem;color:var(--muted);margin-left:auto}
+
+/* symbol table */
+.symwrap{overflow-x:auto;border-radius:16px;border:1px solid var(--line);background:var(--surface)}
+table.sym{border-collapse:collapse;width:100%;min-width:620px}
+.sym th,.sym td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;font-size:.95rem}
+.sym th{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);background:var(--band)}
+.sym td:first-child{font-family:var(--mono);font-weight:700;font-size:1.15rem;white-space:nowrap}
+.sym td.say{font-weight:700;min-width:150px}
+.sym td code{font-size:.88rem;background:var(--bg);padding:2px 6px;border-radius:6px;white-space:nowrap}
+.sym tr.grp td{background:var(--bg);font-family:var(--body);font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;padding:8px 14px}
+@media (max-width:640px){
+  .symwrap table.sym{min-width:0}
+  .sym thead{display:none}
+  table.sym,.sym tbody{display:block}
+  .sym tr{display:flex;flex-wrap:wrap;gap:6px 14px;padding:14px 16px;border-bottom:1px solid var(--line);align-items:baseline}
+  .sym td{display:block;border:none !important;padding:0 !important;min-width:0 !important}
+  .sym td:nth-child(3),.sym td:nth-child(4){flex:1 1 100%}
+  .sym td code{white-space:normal}
+  .sym tr.grp{display:block;padding:0;border-bottom:1px solid var(--line)}
+  .sym tr.grp td{display:block;padding:8px 16px !important}
+}
+.tipbox{background:var(--sym-soft);color:var(--ink);border-radius:14px;padding:14px 18px;font-size:.95rem}
+
+/* playground */
+.play{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px;align-items:start}
+@media (max-width:860px){.play{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.mission{background:var(--bg);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.mission-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.dots{display:flex;gap:6px}
+.dots button{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);background:var(--surface);color:var(--muted);font:700 .75rem var(--body);cursor:pointer;padding:0}
+.dots button.cur{border-color:var(--ink);color:var(--ink)}
+.dots button.won{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.mission h3{font-size:1.1rem}
+.linkbtn{background:none;border:none;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:.88rem}
+.hint{font-size:.9rem;color:var(--muted)}
+textarea{width:100%;min-height:120px;resize:vertical;font-family:var(--mono);font-size:15px;line-height:1.5;padding:12px 14px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
+textarea:focus{outline:none;border-color:var(--sel)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font:700 1rem var(--body);padding:10px 20px;border-radius:10px;border:none;background:var(--ink);color:var(--bg);cursor:pointer}
+.btn:hover{opacity:.88}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
+.kbd{font-size:.8rem;color:var(--muted)}
+.examples{display:flex;flex-wrap:wrap;gap:6px}
+.examples button{font-family:var(--mono);font-size:.78rem;padding:5px 9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;text-align:left}
+.examples button:hover{border-color:var(--ink)}
+.english{font-size:1rem;background:var(--bg);border-radius:10px;padding:10px 14px}
+.english .lbl{display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.msg{border-radius:10px;padding:10px 14px;font-weight:700;font-size:.95rem}
+.msg.err{background:var(--bad-soft);color:var(--bad)}
+.msg.win{background:var(--ok-soft);color:var(--ok)}
+.msg.near{background:var(--from-soft);color:var(--from)}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.steps li{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:start;padding:6px 12px;border-radius:10px;border:2px solid transparent;background:var(--bg);opacity:.5;transition:opacity .3s,border-color .3s}
+.steps li .n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.75rem;background:var(--line);color:var(--ink)}
+.steps li.active{opacity:1;border-color:var(--c)}
+.steps li.done{opacity:1}
+.steps li.done .n{background:var(--c);color:var(--surface)}
+.steps li .t{font-size:.88rem}
+.tablewrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line);transition:box-shadow .4s,border-color .4s}
+.tablewrap.lit{border-color:var(--from);box-shadow:0 0 0 4px var(--from-soft)}
+table.data{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:.88rem;font-variant-numeric:tabular-nums}
+.data tr{position:relative;transition:opacity .5s}
+.data th,.data td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;transition:opacity .4s,background .25s,color .3s;background:var(--surface)}
+.data th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.data td.num{text-align:right}
+.data td.mark,.data th.mark{width:34px;text-align:center;padding:8px 4px;font-weight:700}
+.data tr.checking td{background:var(--where-soft)}
+.data tr.keep td.mark{color:var(--ok)}
+.data tr.drop td{opacity:.28;text-decoration:line-through}
+.data tr.drop td.mark{color:var(--bad);opacity:1;text-decoration:none}
+.data .col-drop{opacity:.18}
+.data th.col-keep{background:var(--sel-soft);color:var(--sel)}
+.data .grpcol{color:var(--grp);font-weight:600;opacity:1 !important}
+.data tr.pile0 td{background:var(--grp-soft)}
+.data tr.pilestart td{border-top:3px solid var(--grp)}
+.data tr.pile0 td.mark,.data tr.pile1 td.mark{color:var(--grp)}
+.data tr.counting td{background:var(--agg-soft) !important}
+.data tr.squashed{opacity:.15}
+.data .sortcol{background:var(--ord-soft) !important;color:var(--ord);opacity:1 !important}
+.data td.rank{color:var(--ord)}
+.data tr.cut td{opacity:.25;text-decoration:line-through}
+.data tr.cut td.mark{color:var(--bad);opacity:1;text-decoration:none}
+.data tr.kept td.mark{color:var(--lim)}
+.data.result th{background:var(--sel-soft);color:var(--sel)}
+.data.result th.agg{background:var(--agg-soft);color:var(--agg)}
+.data.result th.gk{background:var(--grp-soft);color:var(--grp)}
+.data.result tr{animation:pop .35s ease both}
+@keyframes pop{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.till{font-family:var(--mono);font-size:.86rem;background:var(--paper);border:2px dashed var(--agg);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:4px;font-variant-numeric:tabular-nums}
+.till .lbl{font-family:var(--body);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--agg)}
+.till .ln{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.till .ln .pl{color:var(--grp);font-weight:600}
+.till .ln b{color:var(--agg)}
+.count{font-weight:700;font-size:.95rem}
+.order-note{font-size:.85rem;color:var(--muted)}
+
+/* quiz */
+.quiz{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.quiz{grid-template-columns:1fr}}
+.qz{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.qz:last-child:nth-child(odd){grid-column:1/-1}
+.qz .prompt{font-weight:700}
+.qz .opts{display:flex;flex-direction:column;gap:8px}
+.qz .opts button{text-align:left;font:inherit;font-size:.95rem;padding:10px 14px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.qz .opts button.mono{font-family:var(--mono);font-size:.82rem}
+.qz .opts button:hover:not(:disabled){border-color:var(--ink)}
+.qz .opts button.right{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.qz .opts button.wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.qz .why{font-size:.92rem;color:var(--muted)}
+.score{font-family:var(--display);font-weight:800;font-size:1.2rem}
+
+/* pocket */
+.pocket{background:var(--surface);border:2px solid var(--ink);border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:14px;max-width:680px}
+.pocket .line{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;align-items:baseline;font-size:1.05rem}
+.pocket .line code{font-weight:600;font-size:1.05rem}
+.pocket hr{border:none;border-top:1px dashed var(--line);margin:0;width:100%}
+.pocket ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+footer{color:var(--muted);font-size:.9rem}
+@media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+</style>
+
+</head>
+<body>
+<main class="wrap">
+  <nav class="topnav" aria-label="Lessons"><a href="lesson-3.html">&larr; Lesson 3</a><a class="mid" href="index.html">All lessons</a><a href="lesson-5.html">Lesson 5 &rarr;</a></nav>
+
+
+  <header class="hero">
+    <span class="eyebrow">SQL Café · Lesson 4 of 8</span>
+    <h1>Please put them into piles first.</h1>
+    <div class="recap">So far: <span class="chip sel">SELECT</span><span class="chip from">FROM</span><span class="chip where">WHERE</span><span class="chip ord">ORDER BY</span><span class="chip lim">LIMIT</span><span class="chip agg">COUNT SUM AVG MIN MAX</span> <a href="lesson-1.html">Lesson 1</a> · <a href="lesson-2.html">Lesson 2</a> · <a href="lesson-3.html">Lesson 3</a></div>
+    <p>In Lesson 3 the receipt words squashed the whole menu into one answer. But what if you want one answer <b>for the drinks</b> and another <b>for the food</b>? Today you learn to put the rows into piles first, then get one answer per pile.</p>
+    <div class="order">
+      <div class="bubble"><small>You say to the waiter</small>
+        “Please could you tell me <span class="u agg">the average price</span> <span class="u grp">for each type</span>: one for the drinks and one for the food? Thank you!”
+      </div>
+      <div class="arrow">↓ same thing in SQL</div>
+      <div class="sqlline"><span class="k-sel">SELECT</span> type, <span class="k-agg">AVG</span>(price) <span class="k-from">FROM</span> menu <span class="k-grp">GROUP BY</span> type;</div>
+    </div>
+  </header>
+
+  <section aria-labelledby="h-piles">
+    <span class="eyebrow">The one thing to remember</span>
+    <h2 id="h-piles">Make piles, then squash each pile</h2>
+    <p>GROUP BY works like a waiter putting the menu cards into piles: all the drinks in one pile, all the food in another. Then the receipt words squash <b>each pile</b> into one row. So you get one row per pile.</p>
+    <div class="piles">
+      <div class="pcol">
+        <div class="bars" aria-hidden="true"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></div>
+        <span class="cap">8 rows</span>
+      </div>
+      <div class="big-arrow" aria-hidden="true">→</div>
+      <div class="pcol">
+        <div class="pilepair" aria-hidden="true">
+          <div class="bars"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i></div>
+          <div class="bars"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></div>
+        </div>
+        <span class="cap">GROUP BY type makes 2 piles</span>
+      </div>
+      <div class="big-arrow" aria-hidden="true">→</div>
+      <div class="pcol">
+        <div class="outrow"><span class="d">drink <b>£3.63</b></span><span class="f">food <b>£4.00</b></span></div>
+        <span class="cap">AVG(price) squashes each pile: 2 rows</span>
+      </div>
+    </div>
+    <div class="legend"><span><i style="background:var(--grp)"></i>a drink row</span><span><i style="box-shadow:inset 0 0 0 2px var(--grp)"></i>a food row</span></div>
+    <div class="fact">
+      <div><b>Compare with Lesson 3:</b> without GROUP BY, all the rows left after WHERE make one big pile, so you get one row. With GROUP BY type, there are two piles, so you get two rows. <b>One pile in, one row out</b>, for every pile.</div>
+      <div><b>About the numbers:</b> the drinks add up to £14.50, and £14.50 ÷ 4 = £3.625, shown here rounded to £3.63. The food adds up to £16.00, and £16.00 ÷ 4 = £4.00.</div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-rule">
+    <span class="eyebrow">The pile rule</span>
+    <h2 id="h-rule">Pile label, or inside brackets</h2>
+    <div class="rule">
+      <span class="big">Every column after SELECT must be either the <span class="k-grp">pile label</span> (a column named in GROUP BY) or <span class="k-agg">inside a receipt word</span>.</span>
+      <div class="eg"><span class="mk y" aria-label="Allowed">✓</span><div><code>SELECT type, COUNT(*) FROM menu GROUP BY type</code><p>type is the pile label, and COUNT(*) is inside brackets. Every pile can show both.</p></div></div>
+      <div class="eg"><span class="mk n" aria-label="Not allowed">✗</span><div><code>SELECT type, item, COUNT(*) FROM menu GROUP BY type</code><p>The drinks pile has four different items. Which one should its single row show? There is no right answer, so most databases give an error.</p></div></div>
+      <div class="eg"><span class="mk y" aria-label="Allowed">✓</span><div><code>SELECT type, MIN(item) FROM menu GROUP BY type</code><p>Putting item inside a receipt word fixes it: “the first item from A to Z in each pile”.</p></div></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-having">
+    <span class="eyebrow">A second new word</span>
+    <h2 id="h-having">WHERE picks rows, HAVING picks piles</h2>
+    <p>Sometimes you only want some of the piles, for example “only the types that cost more than £3.80 on average”. WHERE can't do this, because WHERE checks one row at a time, before any piles exist. That is what HAVING is for.</p>
+    <div class="two">
+      <div class="q" style="--c:var(--where);--cs:var(--where-soft)">
+        <span class="kw">WHERE</span>
+        <span class="ask">Which rows?</span>
+        <span class="memo">Before the piles are made</span>
+        <code class="ex">WHERE calories &lt; 200</code>
+        <p>Throws away single rows. Receipt words are not allowed here.</p>
+      </div>
+      <div class="q" style="--c:var(--grp);--cs:var(--grp-soft)">
+        <span class="kw">HAVING</span>
+        <span class="ask">Which piles?</span>
+        <span class="memo">After each pile is squashed</span>
+        <code class="ex">HAVING AVG(price) &gt; 3.8</code>
+        <p>Throws away whole piles. Here only food is kept, because its average is £4.00 and the drinks average is £3.625.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-mnemo">
+    <span class="eyebrow">The full order, in one sentence</span>
+    <h2 id="h-mnemo">Some Friendly Waiters Gladly Hand Out Lemonade</h2>
+    <p>Lesson 2's sentence grows by two words. GROUP BY and HAVING go between WHERE and ORDER BY.</p>
+    <div class="mnemo">
+      <div class="words">
+        <span><b class="k-sel">S</b>ome</span><span><b class="k-from">F</b>riendly</span><span><b class="k-where">W</b>aiters</span><span><b class="k-grp">G</b>ladly</span><span><b class="k-grp">H</b>and</span><span><b class="k-ord">O</b>ut</span><span><b class="k-lim">L</b>emonade</span>
+      </div>
+      <div class="map"><span class="chip sel">SELECT</span>→<span class="chip from">FROM</span>→<span class="chip where">WHERE</span>→<span class="chip grp">GROUP BY</span>→<span class="chip grp">HAVING</span>→<span class="chip ord">ORDER BY</span>→<span class="chip lim">LIMIT</span></div>
+      <p style="color:var(--muted);font-size:.95rem">You can still skip the ones you don't need. HAVING is used together with GROUP BY.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-read">
+    <span class="eyebrow">Read the code one word at a time</span>
+    <h2 id="h-read">Every piece has a meaning</h2>
+    <p>Please press <b>Next</b> (or click any piece) and watch the sentence grow underneath. Today's new piece is grape coloured.</p>
+    <div class="reader">
+      <div class="bigq" id="bigq" role="group" aria-label="The query, one piece at a time"></div>
+      <div class="explain">
+        <div class="ebox">
+          <span class="kind" id="r-kind"></span>
+          <span class="big" id="r-big"></span>
+          <span id="r-what"></span>
+          <span class="tip" id="r-tip"></span>
+        </div>
+        <div class="ebox">
+          <span class="kind">Say it out loud</span>
+          <span class="sayit" id="r-say" aria-live="polite"></span>
+        </div>
+      </div>
+      <div class="nav">
+        <button class="btn ghost" id="r-back" type="button">◀ Back</button>
+        <button class="btn" id="r-next" type="button">Next ▶</button>
+        <span class="progress" id="r-prog"></span>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-sym">
+    <span class="eyebrow">Today's words and symbols</span>
+    <h2 id="h-sym">Say each one out loud</h2>
+    <p>Swap each word for what you say, and the code becomes a normal sentence again.</p>
+    <div class="symwrap">
+      <table class="sym">
+        <thead><tr><th>Write</th><th>Say it as</th><th>Example</th><th>Why it's there</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="4">Making piles</td></tr>
+          <tr><td class="k-grp">GROUP BY</td><td class="say">“with one pile per…”</td><td><code>GROUP BY type</code></td><td>Two words that always go together. Rows with the same type go into the same pile.</td></tr>
+          <tr><td class="k-sym">,</td><td class="say">“and”</td><td><code>GROUP BY type, price</code></td><td>A pile for each different pair: drinks at £3.50, food at £3.50, and so on.</td></tr>
+          <tr class="grp"><td colspan="4">Choosing piles</td></tr>
+          <tr><td class="k-grp">HAVING</td><td class="say">“but only piles where…”</td><td><code>HAVING COUNT(*) &gt; 3</code></td><td>A test for each pile, after it is squashed. Receipt words are allowed here.</td></tr>
+          <tr class="grp"><td colspan="4">Sorting piles</td></tr>
+          <tr><td class="k-ord">ORDER BY</td><td class="say">“sorted by…”</td><td><code>ORDER BY AVG(price) DESC</code></td><td>You can sort the answer by a receipt word too. Without ORDER BY, the order of the piles is not guaranteed.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-play">
+    <span class="eyebrow">Your turn</span>
+    <h2 id="h-play">Playground: watch the piles form</h2>
+    <p>Please type a query and press <b>Run</b>. Watch the rows slide into piles, then see each pile squash into one row.</p>
+    <div class="play">
+      <div class="panel">
+        <div class="mission">
+          <div class="mission-top"><span class="eyebrow">Mission</span><div class="dots" id="dots"></div></div>
+          <h3 id="m-title"></h3>
+          <div class="row"><button class="linkbtn" id="m-hint-btn" type="button">Show a hint</button><button class="linkbtn" id="m-ans-btn" type="button">Show the answer</button></div>
+          <p class="hint" id="m-hint" hidden></p>
+        </div>
+        <label for="sql" class="eyebrow">Your query</label>
+        <textarea id="sql" spellcheck="false" autocapitalize="off" autocomplete="off">SELECT type, AVG(price) FROM menu GROUP BY type;</textarea>
+        <div class="row"><button class="btn" id="run" type="button">▶ Run</button><button class="btn ghost" id="replay" type="button">Replay slowly</button><span class="kbd">Ctrl + Enter also runs</span></div>
+        <div class="english" id="english" aria-live="polite"></div>
+        <div id="msg" aria-live="polite"></div>
+        <div>
+          <span class="eyebrow">Or try one of these</span>
+          <div class="examples" id="examples" style="margin-top:8px"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <ol class="steps" id="steps">
+          <li style="--c:var(--from)"><span class="n">1</span><span class="t"></span></li>
+          <li style="--c:var(--where)"><span class="n">2</span><span class="t"></span></li>
+          <li style="--c:var(--grp)"><span class="n">3</span><span class="t"></span></li>
+          <li style="--c:var(--agg)"><span class="n">4</span><span class="t"></span></li>
+          <li style="--c:var(--grp)"><span class="n">5</span><span class="t"></span></li>
+          <li style="--c:var(--ord)"><span class="n">6</span><span class="t"></span></li>
+          <li style="--c:var(--lim)"><span class="n">7</span><span class="t"></span></li>
+        </ol>
+        <div class="till" id="till" hidden><span class="lbl">The till, pile by pile</span><div id="till-lines"></div></div>
+        <div class="tablewrap" id="tw"><div id="stage"></div></div>
+        <div class="count" id="count"></div>
+        <p class="order-note">Order of work: <span class="k-from">FROM</span>, <span class="k-where">WHERE</span>, <span class="k-grp">GROUP BY</span>, <span class="k-grp">HAVING</span>, <span class="k-sel">SELECT</span>, <span class="k-ord">ORDER BY</span>, <span class="k-lim">LIMIT</span>. The receipt words are worked out for each pile as soon as the piles are made.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-quiz">
+    <span class="eyebrow">Lock it in</span>
+    <h2 id="h-quiz">Five quick questions</h2>
+    <p>Answering from memory is the fastest way to make something stick. Wrong answers explain themselves, so please don't worry.</p>
+    <div class="quiz" id="quiz"></div>
+    <div class="score" id="score" aria-live="polite"></div>
+  </section>
+
+  <section aria-labelledby="h-card">
+    <span class="eyebrow">Take this with you</span>
+    <h2 id="h-card">Your pocket card</h2>
+    <p>Please take a screenshot of this card. Read it once tomorrow and once next week.</p>
+    <div class="pocket">
+      <div class="line"><code class="k-grp">GROUP BY</code><span><b>One pile per what?</b></span></div>
+      <div class="line"><code class="k-grp">HAVING</code><span><b>Which piles?</b></span></div>
+      <hr>
+      <ul>
+        <li>Make piles, then squash each pile: one row per pile.</li>
+        <li>The pile rule: after SELECT, use the pile label or a receipt word.</li>
+        <li>WHERE picks rows (before the piles). HAVING picks piles (after the squash).</li>
+        <li>Receipt words can go in HAVING, never in WHERE.</li>
+        <li>Order to write: <b>S</b>ome <b>F</b>riendly <b>W</b>aiters <b>G</b>ladly <b>H</b>and <b>O</b>ut <b>L</b>emonade.</li>
+        <li>Want the piles in a set order? Add ORDER BY.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Next lesson: <a href="lesson-5.html"><b>Lesson 5: JOIN</b></a>, or how to put two tables side by side, such as the menu and a list of orders.</footer>
+  <p class="madeby">SQL Caf&eacute; is a free course by <a href="https://masshai.com">MASSH AI</a>. Want SQL or data training for your team? <a href="https://masshai.com/#contact">Please get in touch</a>.</p>
+</main>
+
+<script>
+(function(){
+const MENU = {
+  cols:['id','item','type','price','calories'],
+  num:{id:1,price:1,calories:1},
+  rows:[
+    {id:1,item:'Espresso',type:'drink',price:2.5,calories:5},
+    {id:2,item:'Cappuccino',type:'drink',price:3.5,calories:120},
+    {id:3,item:'Iced Latte',type:'drink',price:4.5,calories:180},
+    {id:4,item:'Hot Chocolate',type:'drink',price:4,calories:310},
+    {id:5,item:'Croissant',type:'food',price:3,calories:270},
+    {id:6,item:'Bagel',type:'food',price:3.5,calories:250},
+    {id:7,item:'Carrot Cake',type:'food',price:5.5,calories:420},
+    {id:8,item:'Fruit Cup',type:'food',price:4,calories:90}
+  ]
+};
+const FNS=['count','sum','avg','min','max'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let speed = 1;
+const sleep = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms * speed));
+
+/* ---------- tiny SQL reader ---------- */
+function lev(a,b){const m=[];for(let i=0;i<=a.length;i++){m[i]=[i];for(let j=1;j<=b.length;j++)m[i][j]=i?Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+(a[i-1]===b[j-1]?0:1)):j}return m[a.length][b.length]}
+function closest(w,list){let best=null,d=9;for(const c of list){const x=lev(w,c);if(x<d){d=x;best=c}}return d<=2?best:null}
+function badCol(w){const s=closest(w,MENU.cols);return 'There is no column called "'+w+'".'+(s?' Did you mean '+s+'?':' The columns are: '+MENU.cols.join(', ')+'.')}
+const ORDER_MSG='The order is: SELECT, FROM, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT (Some Friendly Waiters Gladly Hand Out Lemonade).';
+const UP=s=>s.toUpperCase();
+
+function splitTop(s){ const out=[]; let depth=0, cur=''; for(const ch of s){ if(ch==='(')depth++; if(ch===')')depth--; if(ch===','&&depth===0){out.push(cur);cur=''} else cur+=ch; } out.push(cur); return out; }
+function parseAgg(t){ // "COUNT(*)" style text -> {fn,arg} or null
+  const fm=t.match(/^([A-Za-z_]\w*)(\s*)\(\s*([^()]*?)\s*\)$/);
+  if(!fm) return null;
+  const fn=fm[1].toLowerCase(), arg=fm[3].toLowerCase();
+  if(!FNS.includes(fn)){ const s=closest(fn,FNS); throw Error('"'+fm[1]+'" is not a receipt word.'+(s?' Did you mean '+UP(s)+'?':' Please use COUNT, SUM, AVG, MIN or MAX.')); }
+  if(fm[2]) throw Error('Please remove the space before the bracket: write '+UP(fn)+'( not '+UP(fn)+' (. Some databases refuse the space.');
+  if(!arg) throw Error('The brackets are empty. Please put something inside, like '+UP(fn)+(fn==='count'?'(*)':'(price)')+'.');
+  if(arg==='*'){ if(fn!=='count') throw Error('The star only works inside COUNT. For '+UP(fn)+' please name a number column, like '+UP(fn)+'(price).'); }
+  else{
+    if(!MENU.cols.includes(arg)) throw Error(badCol(arg));
+    if((fn==='sum'||fn==='avg') && !MENU.num[arg]) throw Error('You can\'t add up words, so '+UP(fn)+'('+arg+') makes no sense. Please use a number column: price or calories.');
+  }
+  return {fn,arg};
+}
+function parseItem(raw){
+  let t=raw.trim(), alias=null;
+  if(!t) throw Error('There is an extra comma in your SELECT list. Commas go between items only.');
+  const am=t.match(/^([\s\S]+?)\s+as\s+([A-Za-z_]\w*)$/i);
+  if(am){ t=am[1].trim(); alias=am[2]; }
+  else if(/\s+as\s*$/i.test(t)) throw Error('Please give a name after AS, for example: COUNT(*) AS how_many');
+  const ag=parseAgg(t);
+  if(ag) return {type:'agg',fn:ag.fn,arg:ag.arg,label:alias||UP(ag.fn)+'('+ag.arg+')',alias};
+  if(/\(|\)/.test(t)) throw Error('Brackets go straight after a receipt word, like COUNT(*) or SUM(price). Please check your brackets match.');
+  if(FNS.includes(t.toLowerCase())) throw Error(UP(t)+' needs brackets after it, like '+UP(t)+(t.toLowerCase()==='count'?'(*)':'(price)')+'.');
+  const c=t.toLowerCase();
+  if(c==='*') return {type:'star'};
+  if(/\s/.test(c)) throw Error('"'+t+'" looks like two words. Did you forget a comma?');
+  if(!MENU.cols.includes(c)) throw Error(badCol(c));
+  return {type:'col',col:c,label:alias||c,alias};
+}
+function parse(src){
+  let s = src.trim().replace(/;\s*$/,'').trim();
+  if(!s) throw Error('Please type a query first, starting with SELECT.');
+  if(!/^select\b/i.test(s)) throw Error('Please start with SELECT. It answers "What do you want to see?"');
+  if(!/\bfrom\b/i.test(s)) throw Error('Please add FROM to say which table, for example: FROM menu');
+  const masked = s.replace(/'[^']*'|"[^"]*"/g, m => '_'.repeat(m.length));
+  if(/\bsort\s+by\b/i.test(masked)) throw Error('SQL says ORDER BY, not SORT BY. Please use ORDER BY.');
+  if(/\border\b(?!\s+by\b)/i.test(masked)) throw Error('Please write ORDER BY as two words, for example: ORDER BY price');
+  if(/\bgroup\b(?!\s+by\b)/i.test(masked)) throw Error('Please write GROUP BY as two words, for example: GROUP BY type');
+  if(/\baverage\s*\(/i.test(masked)) throw Error('SQL uses the short word AVG, not AVERAGE. Please write AVG(price).');
+  const find = re => { const m = re.exec(masked); return m ? m.index : -1; };
+  const iF=find(/\sfrom\s/i), iW=find(/\swhere\b/i), iG=find(/\sgroup\s+by\b/i), iH=find(/\shaving\b/i), iO=find(/\sorder\s+by\b/i), iL=find(/\slimit\b/i);
+  if(iF<0) throw Error('The pattern is: SELECT something FROM table');
+  const seq=[['WHERE',iW],['GROUP BY',iG],['HAVING',iH],['ORDER BY',iO],['LIMIT',iL]].filter(x=>x[1]>=0);
+  for(let i=1;i<seq.length;i++) if(seq[i][1]<seq[i-1][1]) throw Error('Please put '+seq[i-1][0]+' before '+seq[i][0]+'. '+ORDER_MSG);
+  if(iH>=0 && iG<0) throw Error('HAVING checks piles, and piles are made by GROUP BY. Please add GROUP BY before HAVING (or use WHERE to check single rows).');
+  const marks=seq.map(x=>x[1]);
+  const end = i => { const later = marks.filter(x=>x>i); return later.length?Math.min(...later):s.length; };
+  const selPart=s.slice(6,iF).trim();
+  if(!selPart) throw Error('Please say what you want after SELECT.');
+  const tablePart=s.slice(iF, marks.length?Math.min(...marks):s.length).replace(/^\s*from\s*/i,'').trim();
+  if(!tablePart) throw Error('Please add a table name after FROM. Our table is menu.');
+  if(/\s/.test(tablePart)) throw Error('After FROM menu I expected WHERE, GROUP BY, ORDER BY or LIMIT, but found "'+tablePart.split(/\s+/)[1]+'".');
+  if(tablePart.toLowerCase()!=='menu') throw Error('There is no table called "'+tablePart+'". Our table is menu.');
+  const opens=(selPart.match(/\(/g)||[]).length, closes=(selPart.match(/\)/g)||[]).length;
+  if(opens!==closes) throw Error(opens>closes?'A bracket was opened but never closed. Please add the ).':'There is a ) without a matching (. Please check your brackets.');
+  const items=splitTop(selPart).map(parseItem);
+  const star=items.some(i=>i.type==='star');
+  if(star && items.length>1) throw Error('Please use * on its own, not mixed with other things.');
+  const aggs=items.filter(i=>i.type==='agg'), plain=items.filter(i=>i.type==='col');
+
+  let group=[];
+  if(iG>=0){
+    const gs=s.slice(iG,end(iG)).replace(/^\s*group\s+by\s*/i,'').trim();
+    if(!gs) throw Error('Please say what to make piles of, like: GROUP BY type');
+    group=gs.split(',').map(x=>{ const c=x.trim().toLowerCase(); if(!c) throw Error('There is an extra comma after GROUP BY.'); if(/\(/.test(c)) throw Error('GROUP BY takes a column name, like type, not a receipt word.'); if(/\s/.test(c)) throw Error('"'+x.trim()+'" looks like two words. Did you forget a comma?'); if(!MENU.cols.includes(c)) throw Error(badCol(c)); return c; });
+    if(star) throw Error('Please don\'t use * with GROUP BY. Name the pile label and a receipt word instead, like: SELECT type, COUNT(*)');
+    for(const p of plain) if(!group.includes(p.col)) throw Error('The pile rule: '+p.col+' is not in GROUP BY and not inside a receipt word, so SQL doesn\'t know which '+p.col+' to show for each pile. Please add it to GROUP BY, or put it inside a receipt word like MIN('+p.col+').');
+  } else if(aggs.length && plain.length){
+    throw Error('You can\'t mix '+plain[0].col+' with '+UP(aggs[0].fn)+' on its own, because '+UP(aggs[0].fn)+' squashes everything into one row. Today\'s fix: add GROUP BY '+plain[0].col+' to make one pile per '+plain[0].col+'.');
+  }
+  const isAgg = group.length>0 || aggs.length>0;
+  const cols = star ? MENU.cols.slice() : plain.map(i=>i.col);
+
+  let where=null, whereSrc='', having=null, havingSrc='', order=null, orderSrc='', limit=null;
+  if(iW>=0){
+    whereSrc=s.slice(iW,end(iW)).replace(/^\s*where\b\s*/i,'').trim();
+    if(!whereSrc) throw Error('WHERE needs a test after it, like: WHERE price < 4');
+    if(/\b(count|sum|avg|min|max)\s*\(/i.test(whereSrc)) throw Error('Receipt words can\'t go in WHERE, because WHERE checks one row at a time, before any piles exist. To check piles, please use HAVING after GROUP BY.');
+    where=parseConds(whereSrc,'where',null);
+  }
+  const ctx={items,group};
+  if(iH>=0){
+    havingSrc=s.slice(iH,end(iH)).replace(/^\s*having\b\s*/i,'').trim();
+    if(!havingSrc) throw Error('HAVING needs a test after it, like: HAVING COUNT(*) > 3');
+    having=parseConds(havingSrc,'having',ctx);
+  }
+  if(iO>=0){
+    orderSrc=s.slice(iO,end(iO)).replace(/^\s*order\s+by\s*/i,'').trim();
+    if(!orderSrc) throw Error('Please say what to sort by, like: ORDER BY price');
+    order=splitTop(orderSrc).map(p=>{
+      let t=p.trim(); if(!t) throw Error('There is an extra comma after ORDER BY.');
+      let dir='asc'; const dm=t.match(/^([\s\S]+?)\s+(asc|desc)$/i); if(dm){ t=dm[1].trim(); dir=dm[2].toLowerCase(); }
+      if(/\s/.test(t.replace(/\([^)]*\)/,''))) throw Error('After "'+t.split(/\s+/)[0]+'" you can only write ASC or DESC. Did you forget a comma?');
+      if(isAgg) return {e:resolveExpr(t,ctx,'ORDER BY'),dir,src:t};
+      const col=t.toLowerCase();
+      if(/\(/.test(col)) throw Error('You can only sort by a receipt word when you use receipt words after SELECT.');
+      if(!MENU.cols.includes(col)) throw Error(badCol(col));
+      return {e:{kind:'col',col},dir,src:t};
+    });
+  }
+  if(iL>=0){
+    const v=s.slice(iL).replace(/^\s*limit\s*/i,'').trim();
+    if(!/^\d+$/.test(v)) throw Error('LIMIT needs a whole number with no quotes, like: LIMIT 3');
+    limit=parseInt(v,10);
+  }
+  return {items, aggs, cols, star, group, isAgg, where, whereSrc, having, havingSrc, order, orderSrc, limit};
+}
+function resolveExpr(t,ctx,where){
+  const ag=parseAgg(t);
+  if(ag) return {kind:'agg',fn:ag.fn,arg:ag.arg};
+  const low=t.toLowerCase();
+  const ai=ctx.items.findIndex(i=>i.alias && i.alias.toLowerCase()===low);
+  if(ai>=0){
+    if(where==='HAVING'){ const it=ctx.items[ai]; throw Error('Some databases don\'t allow a name made with AS inside HAVING. Please write '+(it.type==='agg'?UP(it.fn)+'('+it.arg+')':it.col)+' instead of '+it.alias+'.'); }
+    return {kind:'item',idx:ai};
+  }
+  if(ctx.group.includes(low)) return {kind:'col',col:low};
+  if(MENU.cols.includes(low) && !ctx.group.length) throw Error('Without GROUP BY, the receipt words give just one row, so there is nothing to sort by '+low+'. Please remove ORDER BY, or add GROUP BY.');
+  if(MENU.cols.includes(low)) throw Error(where+(where==='HAVING'?' checks':' sorts')+' whole piles, and '+low+' can be different inside each pile. Please use the pile label ('+ctx.group.join(', ')+') or a receipt word, like '+(MENU.num[low]?'AVG('+low+')':'COUNT(*)')+'.');
+  throw Error('I don\'t know "'+t+'". Please use a receipt word like COUNT(*), the pile label, or a name you gave with AS.');
+}
+function tokenize(s,allowAgg){
+  const re=/\s*([A-Za-z_]\w*\s*\([^()]*\)|'[^']*'|"[^"]*"|<=|>=|!=|<>|=|<|>|-?\d+(?:\.\d+)?|[A-Za-z_]\w*)/y; const out=[];
+  re.lastIndex=0;
+  while(re.lastIndex<s.length){
+    const start=re.lastIndex; const m=re.exec(s);
+    if(!m){ const bad=s.slice(start).trim(); if(!bad) break;
+      if(bad[0]==="'"||bad[0]==='"') throw Error('A quote was opened but never closed. Text needs a quote on both sides: \'drink\'');
+      throw Error('I don\'t understand "'+bad.slice(0,12)+'" in your test.'); }
+    out.push(m[1]);
+  }
+  return out;
+}
+function parseConds(s,kind,ctx){
+  const t=tokenize(s); let i=0; const groups=[[]];
+  const OPS=['=','!=','<>','<','>','<=','>='];
+  while(true){
+    const lhs=t[i++];
+    if(!lhs) throw Error('Please write a full test, like: '+(kind==='where'?'price < 4':'COUNT(*) > 3'));
+    let e;
+    if(kind==='where'){
+      const lc=lhs.toLowerCase();
+      if(!/^[A-Za-z_]\w*$/.test(lhs)) throw Error('A test starts with a column name, like: price < 4');
+      if(!MENU.cols.includes(lc)) throw Error(badCol(lc));
+      e={kind:'col',col:lc};
+    } else e=resolveExpr(lhs,ctx,'HAVING');
+    let op=t[i++];
+    if(!op) throw Error('After "'+lhs+'" please add a comparison, like = or >');
+    if(op.toLowerCase()==='like') op='like';
+    else if(!OPS.includes(op)) throw Error('"'+op+'" is not a comparison. Please use = != < > <= or >=');
+    const v=t[i++];
+    if(v===undefined) throw Error('Please finish the test: '+lhs+' '+op+' ... what?');
+    let val;
+    if(/^['"]/.test(v)) val=v.slice(1,-1);
+    else if(/^-?\d/.test(v)) val=parseFloat(v);
+    else throw Error('Text needs quotes: please write \''+v+'\' instead of '+v+'.');
+    groups[groups.length-1].push({e,op,val,src:lhs});
+    const j=t[i];
+    if(j===undefined) break;
+    const jl=j.toLowerCase();
+    if(jl==='and'){i++} else if(jl==='or'){i++;groups.push([])}
+    else throw Error('Please join two tests with AND or OR. I found "'+j+'".');
+  }
+  return groups;
+}
+function cmpVal(x,y){ if(x===null&&y===null) return 0; if(x===null) return -1; if(y===null) return 1; return typeof x==='string' ? String(x).localeCompare(String(y),undefined,{sensitivity:'base'}) : x-y; }
+function compare(a,op,b){
+  if(a===null||a===undefined) return false;
+  if(op==='like'){ const re=new RegExp('^'+String(b).replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/%/g,'.*').replace(/_/g,'.')+'$','i'); return re.test(String(a)); }
+  if(typeof a==='number' && typeof b==='string' && b.trim()!=='' && !isNaN(b)) b=parseFloat(b);
+  if(typeof a==='string'){a=a.toLowerCase(); b=String(b).toLowerCase();}
+  switch(op){case '=':return a===b;case '!=':case '<>':return a!==b;case '<':return a<b;case '>':return a>b;case '<=':return a<=b;case '>=':return a>=b}
+  return false;
+}
+const passRow=(row,where)=>!where||where.some(g=>g.every(c=>compare(row[c.e.col],c.op,c.val)));
+function aggValue(a,rows){
+  if(a.fn==='count') return rows.length;
+  if(!rows.length) return null;
+  const vals=rows.map(r=>r[a.arg]);
+  if(a.fn==='sum') return Math.round(vals.reduce((x,y)=>x+y,0)*100)/100;
+  if(a.fn==='avg') return vals.reduce((x,y)=>x+y,0)/vals.length;
+  if(a.fn==='min') return vals.reduce((x,y)=>cmpVal(y,x)<0?y:x);
+  if(a.fn==='max') return vals.reduce((x,y)=>cmpVal(y,x)>0?y:x);
+}
+function evalExpr(e,g){ if(e.kind==='agg') return aggValue(e,g.rows); if(e.kind==='item') return g.vals[e.idx]; return g.rows.length?g.rows[0][e.col]:null; }
+const passGroup=(g,having)=>!having||having.some(gr=>gr.every(c=>compare(evalExpr(c.e,g),c.op,c.val)));
+function fmtVal(col,v){ if(v===null||v===undefined) return 'nothing'; return col==='price'?'£'+Number(v).toFixed(2):String(v); }
+function fmtItem(it,v){
+  if(v===null||v===undefined) return 'nothing';
+  if(it.type==='col') return fmtVal(it.col,v);
+  if(it.fn==='count') return String(v);
+  if(it.arg==='price') return '£'+v.toFixed(2);
+  if(typeof v==='number') return String(Math.round(v*1000)/1000);
+  return String(v);
+}
+function execute(q){
+  const filtered=MENU.rows.filter(r=>passRow(r,q.where));
+  if(!q.isAgg){
+    const sorted=q.order?filtered.slice().sort((a,b)=>{for(const o of q.order){const r=cmpVal(a[o.e.col],b[o.e.col]); if(r) return o.dir==='desc'?-r:r;} return 0;}):filtered.slice();
+    return {agg:false, filtered, sorted, final:q.limit!==null?sorted.slice(0,q.limit):sorted};
+  }
+  let groups;
+  if(q.group.length){
+    const map=new Map();
+    for(const r of filtered){ const k=q.group.map(c=>r[c]).join('\u0001'); if(!map.has(k)) map.set(k,{key:q.group.map(c=>r[c]),rows:[]}); map.get(k).rows.push(r); }
+    groups=[...map.values()].sort((a,b)=>{for(let i=0;i<a.key.length;i++){const r=cmpVal(a.key[i],b.key[i]); if(r) return r;} return 0;});
+  } else groups=[{key:[],rows:filtered}];
+  groups.forEach((g,i)=>{ g.i=i; g.vals=q.items.map(it=>it.type==='col'?g.rows[0][it.col]:aggValue(it,g.rows)); g.pass=passGroup(g,q.having); });
+  const kept=groups.filter(g=>g.pass);
+  const sorted=q.order?kept.slice().sort((a,b)=>{for(const o of q.order){const r=cmpVal(evalExpr(o.e,a),evalExpr(o.e,b)); if(r) return o.dir==='desc'?-r:r;} return 0;}):kept.slice();
+  return {agg:true, filtered, groups, kept, sorted, final:q.limit!==null?sorted.slice(0,q.limit):sorted};
+}
+const groupName=(g,q)=>g.key.length?g.key.map((v,i)=>fmtVal(q.group[i],v)).join(' + '):'all rows';
+
+/* ---------- plain English ---------- */
+const OPW={'=':'is','!=':'is not','<>':'is not','<':'is less than','>':'is more than','<=':'is at most','>=':'is at least','like':'looks like'};
+function list(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1]}
+function aggWords(a){ if(a.fn==='count') return 'the number of rows'; if((a.fn==='min'||a.fn==='max') && !MENU.num[a.arg]) return 'the '+(a.fn==='min'?'first':'last')+' '+a.arg+' from A to Z'; return ({sum:'the total',avg:'the average',min:'the smallest',max:'the biggest'})[a.fn]+' '+(a.fn==='sum'||a.fn==='avg'?'of ':'')+a.arg; }
+function exprWords(e,q){ if(e.kind==='agg') return aggWords(e); if(e.kind==='item'){ const it=q.items[e.idx]; return it.type==='agg'?aggWords(it):it.col; } return e.col; }
+function condWords(cs,q){ return cs.map(g=>g.map(c=>exprWords(c.e,q)+' '+OPW[c.op]+' '+(typeof c.val==='string'?'“'+esc(c.val)+'”':c.val)).join(' <b>and</b> ')).join(' <b>or</b> '); }
+function english(q){
+  let s;
+  if(q.isAgg){
+    const parts=q.items.map(it=>it.type==='col'?'<span class="k-grp">'+it.col+'</span>':'<span class="k-agg">'+aggWords(it)+'</span>');
+    s='Please tell me '+list(parts)+' <span class="k-from">in the menu</span>';
+  } else s='Please show me <span class="k-sel">'+(q.star?'every column':list(q.cols))+'</span> <span class="k-from">from the menu</span>';
+  if(q.where) s+=' <span class="k-where">(only rows where '+condWords(q.where,q)+')</span>';
+  if(q.group.length) s+=', <span class="k-grp">with one pile per '+q.group.join(' and ')+'</span>';
+  if(q.having) s+=', <span class="k-grp">but only piles where '+condWords(q.having,q)+'</span>';
+  if(q.order) s+=', <span class="k-ord">sorted by '+q.order.map((o,i)=>(i?'then by ':'')+exprWords(o.e,q)+(o.dir==='desc'?' (biggest first)':'')).join(', ')+'</span>';
+  if(q.limit!==null) s+=', <span class="k-lim">only the first '+q.limit+'</span>';
+  return '<span class="lbl">In plain English</span>'+s+'.';
+}
+
+/* ---------- animated run ---------- */
+const stage=$('#stage'), tw=$('#tw'), steps=[...document.querySelectorAll('#steps li')], till=$('#till'), tillLines=$('#till-lines');
+let runId=0;
+function cell(col,v){return '<td data-col="'+col+'"'+(MENU.num[col]?' class="num"':'')+'>'+(col==='price'?'£'+v.toFixed(2):esc(v))+'</td>'}
+function setStep(i,state,html){steps[i].className=state; if(html!==undefined) steps[i].querySelector('.t').innerHTML=html}
+function resetSteps(){
+  setStep(0,'','<span class="chip from">FROM</span> Open the table');
+  setStep(1,'','<span class="chip where">WHERE</span> Keep the rows that pass');
+  setStep(2,'','<span class="chip grp">GROUP BY</span> Make piles');
+  setStep(3,'','<span class="chip sel">SELECT</span> Squash each pile, or pick columns');
+  setStep(4,'','<span class="chip grp">HAVING</span> Keep the piles that pass');
+  setStep(5,'','<span class="chip ord">ORDER BY</span> Line them up');
+  setStep(6,'','<span class="chip lim">LIMIT</span> Keep only the first few');
+}
+function drawFull(){
+  let h='<table class="data"><thead><tr><th class="mark"></th>'+MENU.cols.map(c=>'<th data-col="'+c+'">'+c+'</th>').join('')+'</tr></thead><tbody>';
+  for(const r of MENU.rows) h+='<tr data-id="'+r.id+'"><td class="mark"></td>'+MENU.cols.map(c=>cell(c,r[c])).join('')+'</tr>';
+  stage.innerHTML=h+'</tbody></table>';
+}
+function groupTable(q,groups,withMark){
+  let h='<table class="data result"><thead><tr>'+(withMark?'<th class="mark"></th>':'')+q.items.map(it=>'<th class="'+(it.type==='col'?'gk':'agg')+'">'+esc(it.label)+'</th>').join('')+'</tr></thead><tbody>';
+  groups.forEach((g,i)=>{ h+='<tr data-g="'+g.i+'" style="animation-delay:'+(i*60)+'ms">'+(withMark?'<td class="mark"></td>':'')+q.items.map((it,k)=>'<td'+(typeof g.vals[k]==='number'?' class="num"':'')+'>'+esc(fmtItem(it,g.vals[k]))+'</td>').join('')+'</tr>'; });
+  return h+'</tbody></table>';
+}
+function plainResult(q,rows){
+  if(!rows.length) return '<p style="padding:20px;color:var(--muted)">No rows are left, so the answer is empty. That is a real answer too!</p>';
+  let h='<table class="data result"><thead><tr>'+q.cols.map(c=>'<th>'+c+'</th>').join('')+'</tr></thead><tbody>';
+  rows.forEach((r,i)=>{h+='<tr style="animation-delay:'+(i*40)+'ms">'+q.cols.map(c=>cell(c,r[c])).join('')+'</tr>'});
+  return h+'</tbody></table>';
+}
+async function flip(tbody,rowsInOrder){
+  const vis=rowsInOrder.filter(t=>!t.hidden);
+  const first=new Map(vis.map(t=>[t,t.getBoundingClientRect().top]));
+  rowsInOrder.forEach(t=>tbody.appendChild(t));
+  vis.forEach(t=>{const d=first.get(t)-t.getBoundingClientRect().top; t.style.transition='none'; t.style.transform='translateY('+d+'px)'});
+  void tbody.offsetHeight;
+  vis.forEach(t=>{t.style.transition='transform .8s cubic-bezier(.2,.7,.2,1)'; t.style.transform=''});
+  await sleep(900);
+}
+function tillLine(q,g){
+  const parts=q.items.map((it,k)=>{
+    if(it.type==='col') return null;
+    let v=fmtItem(it,g.vals[k]);
+    if(it.fn==='avg' && it.arg==='price' && g.rows.length){ const s=Math.round(g.rows.reduce((x,r)=>x+r.price,0)*100)/100, ex=Math.round(s/g.rows.length*1000)/1000; if(Math.abs(ex*100-Math.round(ex*100))>1e-9) v='£'+ex+' → '+v; }
+    return esc(it.label)+' = <b>'+esc(v)+'</b>';
+  }).filter(Boolean);
+  return '<div class="ln"><span class="pl">'+esc(groupName(g,q))+' ('+g.rows.length+' row'+(g.rows.length===1?'':'s')+')</span><span>'+(parts.join(', ')||'one row')+'</span></div>';
+}
+async function animate(q,res){
+  const id=++runId; const alive=()=>id===runId;
+  resetSteps(); drawFull(); tw.classList.remove('lit'); $('#count').textContent=''; till.hidden=true; tillLines.innerHTML='';
+  await sleep(200); if(!alive())return;
+  setStep(0,'active','<span class="chip from">FROM menu</span> Open the menu table: 8 rows.');
+  tw.classList.add('lit'); await sleep(700); if(!alive())return;
+  setStep(0,'done'); tw.classList.remove('lit');
+
+  const trs=[...stage.querySelectorAll('tbody tr')];
+  const byId={}; trs.forEach(t=>byId[t.dataset.id]=t);
+  if(q.where){
+    setStep(1,'active','<span class="chip where">WHERE '+esc(q.whereSrc)+'</span> Testing each row…');
+    for(const tr of trs){
+      const row=MENU.rows.find(r=>r.id==tr.dataset.id);
+      tr.classList.add('checking'); await sleep(200); if(!alive())return;
+      tr.classList.remove('checking');
+      const ok=passRow(row,q.where);
+      tr.classList.add(ok?'keep':'drop'); tr.querySelector('.mark').textContent=ok?'✓':'✗';
+    }
+    await sleep(500); if(!alive())return;
+    trs.forEach(tr=>{if(tr.classList.contains('drop'))tr.hidden=true});
+    setStep(1,'done','<span class="chip where">WHERE '+esc(q.whereSrc)+'</span> '+res.filtered.length+' of 8 rows passed.');
+  } else setStep(1,'done','<span class="chip where">no WHERE</span> All 8 rows stay.');
+  const tbody=stage.querySelector('tbody');
+
+  if(!q.isAgg){
+    setStep(2,'done','<span class="chip grp">no GROUP BY</span> No piles today.');
+    setStep(3,'active','<span class="chip sel">SELECT '+(q.star?'*':esc(q.cols.join(', ')))+'</span> Pick the columns.');
+    stage.querySelectorAll('[data-col]').forEach(el=>{ if(q.cols.includes(el.dataset.col)){ if(el.tagName==='TH') el.classList.add('col-keep') } else el.classList.add('col-drop'); });
+    await sleep(700); if(!alive())return;
+    setStep(3,'done'); setStep(4,'done','<span class="chip grp">no HAVING</span> No piles to check.');
+    if(q.order){
+      setStep(5,'active','<span class="chip ord">ORDER BY '+esc(q.orderSrc)+'</span> Lining the rows up…');
+      stage.querySelectorAll('[data-col="'+q.order[0].e.col+'"]').forEach(el=>el.classList.add('sortcol'));
+      await flip(tbody,res.sorted.map(r=>byId[r.id])); if(!alive())return;
+      res.sorted.forEach((r,i)=>{const m=byId[r.id].querySelector('.mark'); m.textContent=i+1; m.classList.add('rank')});
+      setStep(5,'done','<span class="chip ord">ORDER BY '+esc(q.orderSrc)+'</span> The rows are in order, numbered 1, 2, 3…');
+    } else setStep(5,'done','<span class="chip ord">no ORDER BY</span> Order is not guaranteed.');
+    if(q.limit!==null){
+      setStep(6,'active','<span class="chip lim">LIMIT '+q.limit+'</span> Keep the first '+q.limit+'.');
+      res.sorted.forEach((r,i)=>{const tr=byId[r.id]; if(i<q.limit) tr.classList.add('kept'); else {tr.classList.add('cut'); tr.querySelector('.mark').textContent='✗'}});
+      await sleep(900); if(!alive())return; setStep(6,'done');
+    } else setStep(6,'done','<span class="chip lim">no LIMIT</span> Every row that is left.');
+    await sleep(300); if(!alive())return;
+    stage.innerHTML=plainResult(q,res.final);
+    $('#count').innerHTML='Answer: <span class="k-sel">'+res.final.length+' row'+(res.final.length===1?'':'s')+'</span>';
+    return;
+  }
+
+  // GROUP BY: make piles
+  const vis=trs.filter(t=>!t.hidden);
+  if(q.group.length){
+    setStep(2,'active','<span class="chip grp">GROUP BY '+esc(q.group.join(', '))+'</span> Sliding rows into piles…');
+    stage.querySelectorAll('[data-col]').forEach(el=>{ if(q.group.includes(el.dataset.col)) el.classList.add('grpcol'); });
+    await sleep(500); if(!alive())return;
+    const order=[]; res.groups.forEach(g=>g.rows.forEach(r=>order.push(byId[r.id])));
+    trs.filter(t=>t.hidden).forEach(t=>order.push(t));
+    await flip(tbody,order); if(!alive())return;
+    res.groups.forEach((g,gi)=>g.rows.forEach((r,ri)=>{ const tr=byId[r.id]; tr.classList.remove('keep'); tr.classList.add(gi%2?'pile1':'pile0'); if(ri===0&&gi>0) tr.classList.add('pilestart'); tr.querySelector('.mark').textContent=gi+1; }));
+    const names=res.groups.map(g=>esc(groupName(g,q))+' ('+g.rows.length+')');
+    setStep(2,'done','<span class="chip grp">GROUP BY '+esc(q.group.join(', '))+'</span> '+res.groups.length+' pile'+(res.groups.length===1?'':'s')+(res.groups.length<=4?': '+names.join(', '):'')+'.');
+    await sleep(500); if(!alive())return;
+  } else {
+    setStep(2,'done','<span class="chip grp">no GROUP BY</span> All rows make one big pile.');
+    vis.forEach(t=>{t.classList.remove('keep'); t.classList.add('pile0'); t.querySelector('.mark').textContent='1';});
+  }
+  // squash each pile
+  setStep(3,'active','<span class="chip agg">'+esc(q.aggs.map(a=>a.label).join(', ')||'squash')+'</span> The till works through each pile…');
+  till.hidden=false;
+  for(const g of res.groups){
+    g.rows.forEach(r=>byId[r.id].classList.add('counting'));
+    tillLines.insertAdjacentHTML('beforeend',tillLine(q,g));
+    await sleep(Math.max(500,1100-res.groups.length*90)); if(!alive())return;
+    g.rows.forEach(r=>{byId[r.id].classList.remove('counting'); byId[r.id].classList.add('squashed');});
+  }
+  if(!res.groups.length) tillLines.innerHTML='<div class="ln"><span>No rows are left, so there are no piles.</span></div>';
+  await sleep(500); if(!alive())return;
+  stage.innerHTML=groupTable(q,res.groups,true);
+  setStep(3,'done','<span class="chip agg">squashed</span> '+res.groups.length+' pile'+(res.groups.length===1?'':'s')+' → '+res.groups.length+' row'+(res.groups.length===1?'':'s')+'.');
+  await sleep(700); if(!alive())return;
+  const gtr={}; stage.querySelectorAll('tbody tr').forEach(t=>gtr[t.dataset.g]=t);
+  if(q.having){
+    setStep(4,'active','<span class="chip grp">HAVING '+esc(q.havingSrc)+'</span> Testing each pile…');
+    for(const g of res.groups){ const tr=gtr[g.i]; tr.classList.add('checking'); await sleep(450); if(!alive())return; tr.classList.remove('checking'); tr.classList.add(g.pass?'keep':'drop'); tr.querySelector('.mark').textContent=g.pass?'✓':'✗'; }
+    await sleep(600); if(!alive())return;
+    res.groups.forEach(g=>{ if(!g.pass) gtr[g.i].hidden=true; });
+    setStep(4,'done','<span class="chip grp">HAVING '+esc(q.havingSrc)+'</span> '+res.kept.length+' of '+res.groups.length+' piles passed.');
+  } else setStep(4,'done','<span class="chip grp">no HAVING</span> Every pile stays.');
+  if(q.order){
+    setStep(5,'active','<span class="chip ord">ORDER BY '+esc(q.orderSrc)+'</span> Lining the piles up…');
+    await flip(stage.querySelector('tbody'),res.sorted.map(g=>gtr[g.i]).concat(res.groups.filter(g=>!g.pass).map(g=>gtr[g.i]))); if(!alive())return;
+    res.sorted.forEach((g,i)=>{ const m=gtr[g.i].querySelector('.mark'); m.textContent=i+1; m.classList.add('rank'); });
+    setStep(5,'done','<span class="chip ord">ORDER BY '+esc(q.orderSrc)+'</span> The piles are in order, numbered 1, 2, 3…');
+  } else setStep(5,'done','<span class="chip ord">no ORDER BY</span> Order of piles is not guaranteed.');
+  if(q.limit!==null){
+    setStep(6,'active','<span class="chip lim">LIMIT '+q.limit+'</span> Keep the first '+q.limit+'.');
+    res.sorted.forEach((g,i)=>{ const tr=gtr[g.i]; if(i<q.limit) tr.classList.add('kept'); else {tr.classList.add('cut'); tr.querySelector('.mark').textContent='✗'} });
+    await sleep(900); if(!alive())return; setStep(6,'done');
+  } else setStep(6,'done','<span class="chip lim">no LIMIT</span> Every pile that is left.');
+  await sleep(300); if(!alive())return;
+  stage.innerHTML=res.final.length?groupTable(q,res.final,false):'<p style="padding:20px;color:var(--muted)">No piles are left, so the answer is empty. That is a real answer too!</p>';
+  $('#count').innerHTML='Answer: <span class="k-grp">'+res.final.length+' row'+(res.final.length===1?'':'s')+'</span>, one per pile';
+}
+
+/* ---------- missions ---------- */
+const MISSIONS=[
+  {title:'Please show each type and how many items it has.', need:[{type:'col',col:'type'},{type:'agg',fn:'count',arg:'*'}], keys:['drink','food'], rows:[1,2,3,4,5,6,7,8],
+   hint:'Make one pile per type with GROUP BY type, and count each pile with COUNT(*).', answer:'SELECT type, COUNT(*) FROM menu GROUP BY type;'},
+  {title:'Please show each type with its highest number of calories.', need:[{type:'col',col:'type'},{type:'agg',fn:'max',arg:'calories'}], keys:['drink','food'], rows:[1,2,3,4,5,6,7,8],
+   hint:'“Highest” is MAX. Put calories inside the brackets.', answer:'SELECT type, MAX(calories) FROM menu GROUP BY type;'},
+  {title:'For each type, please count only the items under 200 calories.', need:[{type:'col',col:'type'},{type:'agg',fn:'count',arg:'*'}], keys:['drink','food'], rows:[1,2,3,8],
+   hint:'Throw away the rows first with WHERE calories < 200, then make the piles.', answer:'SELECT type, COUNT(*) FROM menu WHERE calories < 200 GROUP BY type;'},
+  {title:'Please show only the types whose average price is more than £3.80, with that average.', need:[{type:'col',col:'type'},{type:'agg',fn:'avg',arg:'price'}], keys:['food'], rows:[1,2,3,4,5,6,7,8],
+   hint:'Checking piles is a job for HAVING. Prices have no £ sign in SQL: just 3.8.', answer:'SELECT type, AVG(price) FROM menu GROUP BY type HAVING AVG(price) > 3.8;'}
+];
+let cur=0; const won=new Set();
+try{ JSON.parse(localStorage.getItem('sqlcafe4-won')||'[]').forEach(i=>won.add(i)) }catch(e){}
+function saveWon(){ try{ localStorage.setItem('sqlcafe4-won',JSON.stringify([...won])) }catch(e){} }
+function drawMission(){
+  const m=MISSIONS[cur];
+  $('#m-title').textContent=m.title;
+  $('#m-hint').hidden=true; $('#m-hint').textContent='';
+  $('#dots').innerHTML=MISSIONS.map((_,i)=>'<button type="button" aria-label="Mission '+(i+1)+(won.has(i)?' (done)':'')+'" class="'+(i===cur?'cur ':'')+(won.has(i)?'won':'')+'" data-i="'+i+'">'+(won.has(i)?'✓':i+1)+'</button>').join('');
+}
+$('#dots').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cur=+b.dataset.i;drawMission();$('#msg').innerHTML=''});
+$('#m-hint-btn').onclick=()=>{const h=$('#m-hint');h.hidden=false;h.textContent='Hint: '+MISSIONS[cur].hint};
+$('#m-ans-btn').onclick=()=>{const h=$('#m-hint');h.hidden=false;h.innerHTML='Answer: <code>'+esc(MISSIONS[cur].answer)+'</code>. Please type it in yourself, as typing helps you remember.'};
+function check(q,res){
+  const m=MISSIONS[cur], say=h=>$('#msg').innerHTML=h;
+  if(!q.group.length){ say('<div class="msg near">This mission needs piles, so please add <span class="k-grp">GROUP BY type</span>.</div>'); return; }
+  if(q.group.join(',')!=='type'){ say('<div class="msg near">This mission wants one pile per type, so please use <span class="k-grp">GROUP BY type</span>.</div>'); return; }
+  const missing=m.need.filter(n=>!q.items.some(it=>n.type==='col'?(it.type==='col'&&it.col===n.col):(it.type==='agg'&&it.fn===n.fn&&it.arg===n.arg)));
+  if(missing.length){ say('<div class="msg near">Nearly. Please make sure you show '+missing.map(n=>n.type==='col'?'<span class="k-grp">'+n.col+'</span>':'<span class="k-agg">'+UP(n.fn)+'('+n.arg+')</span>').join(' and ')+'.</div>'); return; }
+  const rowsOk=res.filtered.map(r=>r.id).join(',')===m.rows.join(',');
+  if(!rowsOk){ say('<div class="msg near">Right piles, but they were made from '+res.filtered.length+' rows and this mission needs '+m.rows.length+'. Please check your <span class="k-where">WHERE</span>.</div>'); return; }
+  const keys=res.final.map(g=>g.key[0]).sort().join(',');
+  if(keys!==m.keys.slice().sort().join(',')){ say('<div class="msg near">You got '+res.final.length+' pile'+(res.final.length===1?'':'s')+', but this mission wants '+m.keys.length+'. '+(m.keys.length<2?'Please use <span class="k-grp">HAVING</span> to keep only the right piles.':'Please check your HAVING and LIMIT.')+'</div>'); return; }
+  won.add(cur); saveWon();
+  const next=MISSIONS.map((_,k)=>(cur+1+k)%MISSIONS.length).find(i=>!won.has(i)) ?? -1;
+  say('<div class="msg win">Mission '+(cur+1)+' done! '+(next<0?'You finished all four. Well done!':'On to the next one.')+'</div>');
+  if(next>=0) cur=next; drawMission();
+}
+
+/* ---------- wiring ---------- */
+const ta=$('#sql');
+function run(slow){
+  speed=slow?1.8:1;
+  let q; try{ q=parse(ta.value) }catch(e){ runId++; $('#msg').innerHTML='<div class="msg err">'+esc(e.message)+'</div>'; return }
+  $('#english').innerHTML=english(q);
+  const res=execute(q);
+  $('#msg').innerHTML='';
+  const my=runId+1;
+  animate(q,res).then(()=>{ if(!slow && runId===my) check(q,res) });
+}
+$('#run').onclick=()=>run(false);
+$('#replay').onclick=()=>run(true);
+ta.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();run(false)}});
+ta.addEventListener('input',()=>{try{$('#english').innerHTML=english(parse(ta.value))}catch(e){}});
+const EX=["SELECT type, COUNT(*) FROM menu GROUP BY type;","SELECT type, AVG(price), MAX(calories) FROM menu GROUP BY type;","SELECT type, COUNT(*) FROM menu WHERE calories < 200 GROUP BY type;","SELECT price, COUNT(*) FROM menu GROUP BY price ORDER BY price;","SELECT type, AVG(price) FROM menu GROUP BY type HAVING AVG(price) > 3.8;","SELECT type, SUM(calories) AS total FROM menu GROUP BY type ORDER BY total DESC;"];
+$('#examples').innerHTML=EX.map(x=>'<button type="button">'+esc(x)+'</button>').join('');
+$('#examples').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ta.value=b.textContent;run(false)});
+resetSteps(); drawFull(); $('#english').innerHTML=english(parse(ta.value)); drawMission();
+
+/* ---------- word-by-word reader ---------- */
+const READ=[
+  {t:'SELECT',c:'sel',kind:'Main word',what:'Means “please tell me”. You know it well by now.',tip:'',say:'Please tell me'},
+  {t:'type',c:'name',kind:'Column name (the pile label)',what:'The label of each pile: drink or food.',tip:'Allowed after SELECT because it is in GROUP BY.',say:'each type'},
+  {t:',',j:1,c:'sym',kind:'Comma',what:'After SELECT, a comma means “and”.',tip:'',say:'and'},
+  {t:'COUNT',c:'agg',kind:'Receipt word',what:'Counts the rows. Today it counts the rows in each pile.',tip:'From Lesson 3.',say:'the count'},
+  {t:'(',j:1,c:'sym',kind:'Open bracket',what:'Say it as “of”.',tip:'',say:'of'},
+  {t:'*',j:1,c:'sym',kind:'Star',what:'Inside COUNT, the star means “every row”.',tip:'',say:'its rows'},
+  {t:')',j:1,c:'sym',kind:'Close bracket',what:'Closes the bracket.',tip:'You don\'t say anything for this one.',say:''},
+  {t:'FROM',c:'from',kind:'Main word',what:'Says where the data lives.',tip:'',say:'in the'},
+  {t:'menu',c:'name',kind:'Table name',what:'Our one table.',tip:'',say:'menu,'},
+  {t:'GROUP BY',c:'grp',kind:'New main word',what:'Puts the rows into piles. Rows with the same value go into the same pile.',tip:'GROUP and BY always go together.',say:'with one pile per'},
+  {t:'type',c:'name',kind:'Column name',what:'The column that decides the piles: one pile for drink, one for food.',tip:'This is the pile label.',say:'type'},
+  {t:';',j:1,c:'sym',kind:'Semicolon',what:'The full stop. “My question is finished.”',tip:'',say:'. Done!'}
+];
+let rStep=0;
+const bigq=$('#bigq');
+bigq.innerHTML=READ.map((r,i)=>'<button type="button" class="tok t-'+r.c+(r.j?' join':'')+'" data-i="'+i+'" aria-label="'+esc(r.kind+': '+r.t)+'">'+esc(r.t)+'</button>').join('');
+const toks=[...bigq.querySelectorAll('.tok')];
+function drawReader(){
+  const r=READ[rStep];
+  toks.forEach((el,i)=>{el.classList.toggle('seen',i<=rStep);el.classList.toggle('on',i===rStep)});
+  $('#r-kind').textContent=r.kind;
+  const big=$('#r-big'); big.textContent=r.t; big.className='big k-'+r.c;
+  $('#r-what').textContent=r.what; $('#r-tip').textContent=r.tip;
+  let s='', first=true;
+  READ.slice(0,rStep+1).forEach((x,i)=>{
+    if(!x.say){ if(i===rStep) s+=' <span class="new">( nothing to say )</span>'; return; }
+    const w=esc(x.say); const sep=(first||/^[.,]/.test(x.say))?'':' '; first=false;
+    s+=sep+(i===rStep?'<span class="new">'+w+'</span>':w);
+  });
+  $('#r-say').innerHTML='“'+s.trim()+(rStep===READ.length-1?'':' …')+'”';
+  $('#r-prog').textContent='Piece '+(rStep+1)+' of '+READ.length;
+  $('#r-back').disabled=rStep===0;
+  $('#r-next').textContent=rStep===READ.length-1?'Start again ↺':'Next ▶';
+}
+$('#r-next').onclick=()=>{rStep=rStep===READ.length-1?0:rStep+1;drawReader()};
+$('#r-back').onclick=()=>{if(rStep>0){rStep--;drawReader()}};
+bigq.addEventListener('click',e=>{const b=e.target.closest('.tok');if(!b)return;rStep=+b.dataset.i;drawReader()});
+drawReader();
+
+/* ---------- quiz ---------- */
+const QUIZ=[
+  {p:'What does GROUP BY type do?',o:['Makes one pile for each type','Sorts the rows by type','Removes the type column'],a:0,why:'GROUP BY makes piles. Sorting is the job of ORDER BY.'},
+  {p:'How many rows come back from SELECT type, COUNT(*) FROM menu GROUP BY type?',o:['1','2','8'],a:1,why:'There are two types, so two piles, so two rows: one row per pile.'},
+  {p:'Why does SELECT type, item, COUNT(*) FROM menu GROUP BY type fail?',o:['item is not the pile label and not inside a receipt word','COUNT needs a column name','type needs quotes'],a:0,why:'The pile rule: each pile holds four items, so SQL can\'t pick one to show.'},
+  {p:'You only want piles with an average price over £3.80. Which word do you use?',o:['WHERE','HAVING','LIMIT'],a:1,why:'WHERE picks rows before the piles exist. HAVING picks piles after they are squashed.'},
+  {p:'Which query is in the right order?',o:['SELECT type, COUNT(*) FROM menu HAVING COUNT(*) > 3 GROUP BY type','SELECT type, COUNT(*) FROM menu GROUP BY type HAVING COUNT(*) > 3','SELECT type, COUNT(*) GROUP BY type FROM menu'],a:1,mono:1,why:'Some Friendly Waiters Gladly Hand Out Lemonade: GROUP BY comes before HAVING.'}
+];
+let right=0, answered=0;
+$('#quiz').innerHTML=QUIZ.map((q,i)=>'<div class="qz" data-q="'+i+'"><span class="eyebrow">Question '+(i+1)+'</span><span class="prompt">'+esc(q.p)+'</span><div class="opts">'+q.o.map((o,j)=>'<button type="button" class="'+(q.mono?'mono':'')+'" data-j="'+j+'">'+esc(o)+'</button>').join('')+'</div><p class="why" hidden></p></div>').join('');
+$('#quiz').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b||b.disabled)return;
+  const box=b.closest('.qz'), q=QUIZ[+box.dataset.q], j=+b.dataset.j;
+  box.querySelectorAll('button').forEach((x,k)=>{x.disabled=true; if(k===q.a)x.classList.add('right')});
+  if(j!==q.a)b.classList.add('wrong'); else right++;
+  answered++;
+  const w=box.querySelector('.why'); w.hidden=false; w.textContent=(j===q.a?'Yes! ':'Not this time. ')+q.why;
+  if(answered===QUIZ.length) $('#score').textContent='You got '+right+' of '+QUIZ.length+'. '+(right===QUIZ.length?'Perfect. You know Lesson 4.':'Please come back tomorrow and try again. Each try makes it stick.');
+});
+})();
+</script>
+
+</body>
+</html>

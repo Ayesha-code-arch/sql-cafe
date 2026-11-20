@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="SQL Cafe Lesson 1: SELECT, FROM and WHERE explained as ordering at a cafe, with an animated playground.">
+<link rel="canonical" href="https://learn.masshai.com/lesson-1.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%234263EB%27/%3E%3Cpath d=%27M16 24h26v14a10 10 0 0 1-10 10h-6a10 10 0 0 1-10-10z%27 fill=%27white%27/%3E%3Cpath d=%27M42 28h4a5 5 0 0 1 0 10h-4%27 stroke=%27white%27 stroke-width=%274%27 fill=%27none%27/%3E%3C/svg%3E">
+<style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}.topnav{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:.9rem;font-weight:700;margin-bottom:-40px}.topnav a{color:var(--sel);text-decoration:none}.topnav a:hover{text-decoration:underline}.topnav .mid{color:var(--muted)}.madeby{margin-top:-40px;padding-top:18px;border-top:1px dashed var(--line);color:var(--muted);font-size:.9rem;max-width:none}.madeby a{color:var(--sel)}</style>
+<title>SQL Café Lesson 1</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one calm reading column; each SQL keyword owns one colour everywhere (words, table highlights, quiz) so colour itself becomes the memory hook. */
+:root{
+  --bg:#F3F6FC; --surface:#FFFFFF; --ink:#1A2340; --muted:#56617F; --line:#DCE3F0;
+  --band:#E6ECFA;
+  --sel:#4263EB; --sel-soft:#E5EAFF;
+  --from:#E07A00; --from-soft:#FFF0DC;
+  --where:#D6336C; --where-soft:#FFE3EC;
+  --sym:#7048E8; --sym-soft:#EFE9FF;
+  --ok:#0B8A64; --ok-soft:#DCF5EC; --bad:#C92A2A; --bad-soft:#FFE3E3;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10142A; --surface:#181E3A; --ink:#E8ECFA; --muted:#A0A9C9; --line:#2A3358; --band:#1C2448;
+  --sel:#8DA2FF; --sel-soft:#232E63; --from:#FFB04D; --from-soft:#3D2A10;
+  --where:#FF7BA6; --where-soft:#45182B; --sym:#B39CFF; --sym-soft:#2D2360;
+  --ok:#4FD6A5; --ok-soft:#123A30; --bad:#FF8787; --bad-soft:#451C1C;
+  color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#10142A; --surface:#181E3A; --ink:#E8ECFA; --muted:#A0A9C9; --line:#2A3358; --band:#1C2448;
+  --sel:#8DA2FF; --sel-soft:#232E63; --from:#FFB04D; --from-soft:#3D2A10;
+  --where:#FF7BA6; --where-soft:#45182B; --sym:#B39CFF; --sym-soft:#2D2360;
+  --ok:#4FD6A5; --ok-soft:#123A30; --bad:#FF8787; --bad-soft:#451C1C;
+  color-scheme:dark }
+
+*{box-sizing:border-box;font-variant-ligatures:none}
+.qz:last-child:nth-child(odd){grid-column:1/-1}
+.sym td.say{min-width:150px}
+@media (max-width:640px){
+  .symwrap table.sym{min-width:0}
+  .sym thead{display:none}
+  table.sym,.sym tbody{display:block}
+  .sym tr{display:flex;flex-wrap:wrap;gap:6px 14px;padding:14px 16px;border-bottom:1px solid var(--line);align-items:baseline}
+  .sym td{display:block;border:none !important;padding:0 !important;min-width:0 !important}
+  .sym td:nth-child(3),.sym td:nth-child(4){flex:1 1 100%}
+  .sym td code{white-space:normal}
+  .sym tr.grp{display:block;padding:0;border-bottom:1px solid var(--line)}
+  .sym tr.grp td{display:block;padding:8px 16px !important}
+}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:40px 80px;display:flex;flex-direction:column;gap:72px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:clamp(2.2rem,6vw,3.6rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(1.6rem,4vw,2.2rem);font-weight:800}
+h3{font-size:1.25rem;font-weight:600}
+p{margin:0;max-width:65ch}
+.eyebrow{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:20px}
+code,.mono{font-family:var(--mono)}
+.k-sel{color:var(--sel);font-weight:700}
+.k-from{color:var(--from);font-weight:700}
+.k-where{color:var(--where);font-weight:700}
+.chip{display:inline-block;font-family:var(--mono);font-weight:600;font-size:.82rem;padding:2px 8px;border-radius:6px}
+.chip.sel{background:var(--sel-soft);color:var(--sel)}
+.chip.from{background:var(--from-soft);color:var(--from)}
+.chip.where{background:var(--where-soft);color:var(--where)}
+
+/* hero */
+.hero{display:flex;flex-direction:column;gap:22px}
+.order{display:flex;flex-direction:column;gap:14px;margin-top:6px}
+.bubble{background:var(--surface);border:1px solid var(--line);border-radius:18px 18px 18px 4px;padding:18px 22px;font-size:clamp(1.1rem,2.6vw,1.4rem);max-width:640px}
+.bubble small{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.u{border-bottom:3px solid;padding-bottom:1px}
+.u.sel{border-color:var(--sel)} .u.from{border-color:var(--from)} .u.where{border-color:var(--where)}
+.arrow{font-family:var(--mono);color:var(--muted);padding-left:22px}
+.sqlline{font-family:var(--mono);font-size:clamp(1rem,2.4vw,1.25rem);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 22px;max-width:640px;line-height:1.7}
+
+/* three questions */
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.three{grid-template-columns:1fr}}
+.q{background:var(--cs);border:2px solid var(--c);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:12px}
+.q .mini i{background:var(--surface)}
+.hero{background:var(--band);border-radius:24px;padding:clamp(20px,4vw,40px)}
+.k-sym{color:var(--sym);font-weight:700}
+.chip.sym{background:var(--sym-soft);color:var(--sym)}
+/* word-by-word reader */
+.reader{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:clamp(18px,3vw,28px);display:flex;flex-direction:column;gap:18px}
+.bigq{font-family:var(--mono);font-size:clamp(1.05rem,3.4vw,1.7rem);display:flex;flex-wrap:wrap;gap:6px 4px;align-items:baseline;line-height:1.5}
+.tok{padding:2px 6px;border-radius:8px;cursor:pointer;border:2px solid transparent;background:none;font:inherit;color:inherit;opacity:.3;transition:opacity .25s,background .25s,border-color .25s}
+.tok.seen{opacity:1}
+.tok.join{margin-left:-14px}
+.tok.on{opacity:1;border-color:currentColor;background:var(--ts)}
+.tok.t-sel{color:var(--sel);--ts:var(--sel-soft);font-weight:600}
+.tok.t-from{color:var(--from);--ts:var(--from-soft);font-weight:600}
+.tok.t-where{color:var(--where);--ts:var(--where-soft);font-weight:600}
+.tok.t-sym{color:var(--sym);--ts:var(--sym-soft);font-weight:600}
+.tok.t-name{color:var(--ink);--ts:var(--band)}
+.explain{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:700px){.explain{grid-template-columns:1fr}}
+.ebox{background:var(--bg);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.ebox .big{font-family:var(--mono);font-size:1.6rem;font-weight:600}
+.ebox .kind{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:var(--muted)}
+.ebox .tip{font-size:.92rem;color:var(--muted)}
+.sayit{font-size:clamp(1.05rem,2.6vw,1.3rem);font-weight:700;line-height:1.4}
+.sayit .new{background:var(--sym-soft);color:var(--sym);border-radius:6px;padding:0 4px}
+.reader .nav{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.progress{font-size:.85rem;color:var(--muted);margin-left:auto}
+/* symbol table */
+.symwrap{overflow-x:auto;border-radius:16px;border:1px solid var(--line);background:var(--surface)}
+table.sym{border-collapse:collapse;width:100%;min-width:620px}
+.sym th,.sym td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;font-size:.95rem}
+.sym th{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);background:var(--band)}
+.sym td:first-child{font-family:var(--mono);font-weight:700;font-size:1.15rem;white-space:nowrap}
+.sym td.say{font-weight:700}
+.sym td code{font-size:.88rem;background:var(--bg);padding:2px 6px;border-radius:6px;white-space:nowrap}
+.sym tr.grp td{background:var(--bg);font-family:var(--body);font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;padding:8px 14px}
+.tipbox{background:var(--sym-soft);color:var(--ink);border-radius:14px;padding:14px 18px;font-size:.95rem}
+.q .kw{font-family:var(--mono);font-weight:600;font-size:1.5rem;color:var(--c)}
+.q .ask{font-family:var(--display);font-weight:800;font-size:1.35rem;line-height:1.15}
+.q p{color:var(--muted);font-size:.95rem}
+.mini{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;width:150px}
+.mini i{display:block;height:16px;border-radius:3px;background:var(--line)}
+.mini i.on{background:var(--c)}
+.mini.boxed{outline:3px solid var(--c);outline-offset:4px;border-radius:4px}
+.mini.boxed i{background:var(--c);opacity:.55}
+.memo{font-size:.9rem;font-weight:700;color:var(--c)}
+
+.fact{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:16px 20px;display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.fact b{font-family:var(--display)}
+.order-pill{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-family:var(--mono);font-size:.9rem}
+
+/* playground */
+.play{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px;align-items:start}
+@media (max-width:860px){.play{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.mission{background:var(--bg);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.mission-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.dots{display:flex;gap:6px}
+.dots button{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);background:var(--surface);color:var(--muted);font:700 .75rem var(--body);cursor:pointer;padding:0}
+.dots button.cur{border-color:var(--ink);color:var(--ink)}
+.dots button.won{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.mission h3{font-size:1.1rem}
+.linkbtn{background:none;border:none;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:.88rem}
+.hint{font-size:.9rem;color:var(--muted)}
+textarea{width:100%;min-height:110px;resize:vertical;font-family:var(--mono);font-size:15px;line-height:1.5;padding:12px 14px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
+textarea:focus{outline:none;border-color:var(--sel)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font:700 1rem var(--body);padding:10px 20px;border-radius:10px;border:none;background:var(--ink);color:var(--bg);cursor:pointer}
+.btn:hover{opacity:.88}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
+.kbd{font-size:.8rem;color:var(--muted)}
+.examples{display:flex;flex-wrap:wrap;gap:6px}
+.examples button{font-family:var(--mono);font-size:.78rem;padding:5px 9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;text-align:left}
+.examples button:hover{border-color:var(--ink)}
+.english{font-size:1rem;background:var(--bg);border-radius:10px;padding:10px 14px}
+.english .lbl{display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.msg{border-radius:10px;padding:10px 14px;font-weight:700;font-size:.95rem}
+.msg.err{background:var(--bad-soft);color:var(--bad)}
+.msg.win{background:var(--ok-soft);color:var(--ok)}
+.msg.near{background:var(--from-soft);color:var(--from)}
+
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.steps li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;padding:10px 12px;border-radius:10px;border:2px solid transparent;background:var(--bg);opacity:.5;transition:opacity .3s,border-color .3s}
+.steps li .n{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.8rem;background:var(--line);color:var(--ink)}
+.steps li.active{opacity:1;border-color:var(--c)}
+.steps li.done{opacity:1}
+.steps li.done .n{background:var(--c);color:var(--surface)}
+.steps li .t{font-size:.92rem}
+.tablewrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line);transition:box-shadow .4s,border-color .4s}
+.tablewrap.lit{border-color:var(--from);box-shadow:0 0 0 4px var(--from-soft)}
+table.data{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:.88rem;font-variant-numeric:tabular-nums}
+.data th,.data td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;transition:opacity .4s,background .25s,color .3s}
+.data th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.data td.num{text-align:right}
+.data td.mark,.data th.mark{width:30px;text-align:center;padding:8px 4px;font-weight:700}
+.data tr.checking td{background:var(--where-soft)}
+.data tr.keep td{background:var(--ok-soft)}
+.data tr.keep td.mark{color:var(--ok)}
+.data tr.drop td{opacity:.28;text-decoration:line-through}
+.data tr.drop td.mark{color:var(--bad);opacity:1;text-decoration:none}
+.data .col-drop{opacity:.12 !important}
+.data th.col-keep{background:var(--sel-soft);color:var(--sel)}
+.data.result th{background:var(--sel-soft);color:var(--sel)}
+.data.result tr{animation:pop .35s ease both}
+@keyframes pop{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.count{font-weight:700;font-size:.95rem}
+.order-note{font-size:.85rem;color:var(--muted)}
+
+/* quiz */
+.quiz{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.quiz{grid-template-columns:1fr}}
+.qz{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.qz .prompt{font-weight:700}
+.qz .opts{display:flex;flex-direction:column;gap:8px}
+.qz .opts button{text-align:left;font:inherit;font-size:.95rem;padding:10px 14px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.qz .opts button.mono{font-family:var(--mono);font-size:.85rem}
+.qz .opts button:hover:not(:disabled){border-color:var(--ink)}
+.qz .opts button.right{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.qz .opts button.wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.qz .why{font-size:.92rem;color:var(--muted)}
+.score{font-family:var(--display);font-weight:800;font-size:1.2rem}
+
+/* pocket card */
+.pocket{background:var(--surface);border:2px solid var(--ink);border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:18px;max-width:640px}
+.pocket .line{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:baseline;font-size:1.1rem}
+.pocket .line code{font-weight:600;font-size:1.1rem}
+.pocket hr{border:none;border-top:1px dashed var(--line);margin:0;width:100%}
+.pocket ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+footer{color:var(--muted);font-size:.9rem}
+@media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+</style>
+
+</head>
+<body>
+<main class="wrap">
+  <nav class="topnav" aria-label="Lessons"><span></span><a class="mid" href="index.html">All lessons</a><a href="lesson-2.html">Lesson 2 &rarr;</a></nav>
+
+
+  <header class="hero">
+    <span class="eyebrow">SQL Café · Lesson 1 of 8</span>
+    <h1>SQL is just ordering at a café.</h1>
+    <p>You already know how to ask a waiter for something. SQL is the same sentence, written in a way a computer understands. Look how each part lines up:</p>
+    <div class="order">
+      <div class="bubble"><small>You say to the waiter</small>
+        “Please bring me <span class="u sel">the item and the price</span> <span class="u from">from the menu</span>, <span class="u where">only things under £4</span>.”
+      </div>
+      <div class="arrow">↓ same thing in SQL</div>
+      <div class="sqlline"><span class="k-sel">SELECT</span> item, price <span class="k-from">FROM</span> menu <span class="k-where">WHERE</span> price &lt; 4;</div>
+    </div>
+  </header>
+
+  <section aria-labelledby="h-three">
+    <span class="eyebrow">The one thing to remember</span>
+    <h2 id="h-three">Every query asks three questions</h2>
+    <p>Learn these three questions and you know the heart of SQL. Each word has its own colour on this page, so your eyes learn it too.</p>
+    <div class="three">
+      <div class="q" style="--c:var(--sel);--cs:var(--sel-soft)">
+        <span class="kw">SELECT</span>
+        <span class="ask">What do you want to see?</span>
+        <div class="mini" aria-hidden="true" id="mini-sel"></div>
+        <span class="memo">Picks columns ↕ (top to bottom)</span>
+        <p>Name the columns you want, like <code>item, price</code>. A star <code>*</code> means “everything”.</p>
+      </div>
+      <div class="q" style="--c:var(--from);--cs:var(--from-soft)">
+        <span class="kw">FROM</span>
+        <span class="ask">Where is it?</span>
+        <div class="mini boxed" aria-hidden="true" id="mini-from"></div>
+        <span class="memo">Picks the table</span>
+        <p>Tell it which table to open. Today we only have one: <code>menu</code>.</p>
+      </div>
+      <div class="q" style="--c:var(--where);--cs:var(--where-soft)">
+        <span class="kw">WHERE</span>
+        <span class="ask">Which ones?</span>
+        <div class="mini" aria-hidden="true" id="mini-where"></div>
+        <span class="memo">Picks rows ↔ (left to right)</span>
+        <p>A test every row must pass, like <code>price &lt; 4</code>. It's optional. Leave it out to keep every row.</p>
+      </div>
+    </div>
+    <div class="fact">
+      <div><b>Fun fact that helps it stick:</b> you <i>write</i> the words in the order of the three questions, but the database <i>does</i> them in a different order. It opens the table first, throws away rows second, and picks columns last. You'll see this happen in the playground below.</div>
+      <div class="order-pill"><span>You write:</span><span class="chip sel">SELECT</span>→<span class="chip from">FROM</span>→<span class="chip where">WHERE</span>
+        <span style="margin-left:10px">It runs:</span><span class="chip from">FROM</span>→<span class="chip where">WHERE</span>→<span class="chip sel">SELECT</span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-read">
+    <span class="eyebrow">Read the code one word at a time</span>
+    <h2 id="h-read">Every piece has a meaning, even the comma</h2>
+    <p>Code looks scary when it's a block of symbols. Read it one piece at a time and you'll see it is just an English sentence. Please press <b>Next</b> (or click any piece) and read the sentence grow underneath.</p>
+    <div class="reader">
+      <div class="bigq" id="bigq" role="group" aria-label="The query, one piece at a time"></div>
+      <div class="explain">
+        <div class="ebox">
+          <span class="kind" id="r-kind"></span>
+          <span class="big" id="r-big"></span>
+          <span id="r-what"></span>
+          <span class="tip" id="r-tip"></span>
+        </div>
+        <div class="ebox">
+          <span class="kind">Say it out loud</span>
+          <span class="sayit" id="r-say" aria-live="polite"></span>
+        </div>
+      </div>
+      <div class="nav">
+        <button class="btn ghost" id="r-back" type="button">◀ Back</button>
+        <button class="btn" id="r-next" type="button">Next ▶</button>
+        <span class="progress" id="r-prog"></span>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-sym">
+    <span class="eyebrow">Every symbol, explained</span>
+    <h2 id="h-sym">Say each symbol out loud</h2>
+    <p>Each symbol has an everyday word you can say instead. When you read a query, swap each symbol for its word and the code turns into a normal sentence.</p>
+    <div class="symwrap">
+      <table class="sym">
+        <thead><tr><th>Write</th><th>Say it as</th><th>Example</th><th>Why it's there</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="4">The three main words</td></tr>
+          <tr><td class="k-sel">SELECT</td><td class="say">“Please show me…”</td><td><code>SELECT item</code></td><td>Always first. Says which columns you want to see.</td></tr>
+          <tr><td class="k-from">FROM</td><td class="say">“…from the…”</td><td><code>FROM menu</code></td><td>Says which table to look in.</td></tr>
+          <tr><td class="k-where">WHERE</td><td class="say">“…but only where…”</td><td><code>WHERE price &lt; 4</code></td><td>Optional. A test that each row must pass to stay.</td></tr>
+          <tr class="grp"><td colspan="4">Punctuation</td></tr>
+          <tr><td class="k-sym">,</td><td class="say">“and”</td><td><code>item, price</code></td><td>Separates a list, just like “tea, milk, sugar”. Put it <b>between</b> names, never after the last one.</td></tr>
+          <tr><td class="k-sym">*</td><td class="say">“everything”</td><td><code>SELECT *</code></td><td>A shortcut for “all the columns”, so you don't have to type them all.</td></tr>
+          <tr><td class="k-sym">' '</td><td class="say">“the word…”</td><td><code>type = 'drink'</code></td><td>Quotes mean “this is text, not a column name”. Without them SQL looks for a column called drink. Numbers never need quotes.</td></tr>
+          <tr><td class="k-sym">;</td><td class="say">“Done.”</td><td><code>… &lt; 4;</code></td><td>The full stop at the end of the sentence. It tells the database your question is finished.</td></tr>
+          <tr class="grp"><td colspan="4">Comparisons (used after WHERE)</td></tr>
+          <tr><td class="k-sym">=</td><td class="say">“is”</td><td><code>type = 'food'</code></td><td>Exactly the same as.</td></tr>
+          <tr><td class="k-sym">!=</td><td class="say">“is not”</td><td><code>type != 'food'</code></td><td>The <code>!</code> means “not”. You can also write <code>&lt;&gt;</code>.</td></tr>
+          <tr><td class="k-sym">&lt;</td><td class="say">“is less than”</td><td><code>price &lt; 4</code></td><td>Memory trick: the small pointy end faces the smaller side. 3 &lt; 4.</td></tr>
+          <tr><td class="k-sym">&gt;</td><td class="say">“is more than”</td><td><code>calories &gt; 200</code></td><td>The wide open mouth faces the bigger side. 5 &gt; 4.</td></tr>
+          <tr><td class="k-sym">&lt;= &nbsp;&gt;=</td><td class="say">“at most” / “at least”</td><td><code>price &lt;= 4</code></td><td>Same as &lt; and &gt;, but the number itself also counts. £4.00 passes <code>price &lt;= 4</code>.</td></tr>
+          <tr class="grp"><td colspan="4">Joining two tests</td></tr>
+          <tr><td class="k-sym">AND</td><td class="say">“and also”</td><td><code>type = 'food' AND price &lt; 5</code></td><td>Both tests must be true. Makes the answer <b>smaller</b>.</td></tr>
+          <tr><td class="k-sym">OR</td><td class="say">“or”</td><td><code>type = 'drink' OR price &lt; 4</code></td><td>Either test can be true. Makes the answer <b>bigger</b>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tipbox"><b>Two things that don't matter:</b> capital letters and line breaks. <code>select item from menu</code> works just as well. We write the main words in CAPITALS only so they stand out from the names, the same way this page gives them colours.</div>
+  </section>
+
+  <section aria-labelledby="h-play">
+    <span class="eyebrow">Your turn</span>
+    <h2 id="h-play">Playground: watch your query work</h2>
+    <p>Please type a query and press <b>Run</b>. The table acts out each step, so you can see exactly what each word does.</p>
+    <div class="play">
+      <div class="panel">
+        <div class="mission" id="mission">
+          <div class="mission-top"><span class="eyebrow">Mission</span><div class="dots" id="dots"></div></div>
+          <h3 id="m-title"></h3>
+          <div class="row"><button class="linkbtn" id="m-hint-btn" type="button">Show a hint</button><button class="linkbtn" id="m-ans-btn" type="button">Show the answer</button></div>
+          <p class="hint" id="m-hint" hidden></p>
+        </div>
+        <label for="sql" class="eyebrow">Your query</label>
+        <textarea id="sql" spellcheck="false" autocapitalize="off" autocomplete="off">SELECT item, price FROM menu WHERE price < 4;</textarea>
+        <div class="row"><button class="btn" id="run" type="button">▶ Run</button><button class="btn ghost" id="replay" type="button">Replay slowly</button><span class="kbd">Ctrl + Enter also runs</span></div>
+        <div class="english" id="english" aria-live="polite"></div>
+        <div id="msg" aria-live="polite"></div>
+        <div>
+          <span class="eyebrow">Or try one of these</span>
+          <div class="examples" id="examples" style="margin-top:8px"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <ol class="steps" id="steps">
+          <li style="--c:var(--from)"><span class="n">1</span><span class="t"></span></li>
+          <li style="--c:var(--where)"><span class="n">2</span><span class="t"></span></li>
+          <li style="--c:var(--sel)"><span class="n">3</span><span class="t"></span></li>
+        </ol>
+        <div class="tablewrap" id="tw"><div id="stage"></div></div>
+        <div class="count" id="count"></div>
+        <p class="order-note">Notice the order: <span class="k-from">FROM</span> happens first and <span class="k-sel">SELECT</span> happens last, even though you wrote SELECT first.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-quiz">
+    <span class="eyebrow">Lock it in</span>
+    <h2 id="h-quiz">Five quick questions</h2>
+    <p>Answering from memory is the fastest way to make something stick. Wrong answers explain themselves, so please don't worry.</p>
+    <div class="quiz" id="quiz"></div>
+    <div class="score" id="score" aria-live="polite"></div>
+  </section>
+
+  <section aria-labelledby="h-card">
+    <span class="eyebrow">Take this with you</span>
+    <h2 id="h-card">Your pocket card</h2>
+    <p>Please take a screenshot of this card. Read it once tomorrow and once next week, and it will stick.</p>
+    <div class="pocket">
+      <div class="line"><code class="k-sel">SELECT</code><span><b>What</b> do you want to see? <span style="color:var(--muted)">(columns ↕)</span></span></div>
+      <div class="line"><code class="k-from">FROM</code><span><b>Where</b> is it? <span style="color:var(--muted)">(the table)</span></span></div>
+      <div class="line"><code class="k-where">WHERE</code><span><b>Which ones?</b> <span style="color:var(--muted)">(rows ↔, optional)</span></span></div>
+      <hr>
+      <ul>
+        <li><code>,</code> means “and”: <code>item, price</code>. Never after the last name.</li>
+        <li><code>*</code> means every column.</li>
+        <li><code>;</code> means “Done.” It ends the question.</li>
+        <li>Text goes in <code>'quotes'</code>. Numbers don't: <code>type = 'drink'</code>, <code>price &lt; 4</code>.</li>
+        <li>Join tests with <code>AND</code> (both must be true) or <code>OR</code> (either one).</li>
+        <li>Compare with <code>=</code> <code>!=</code> <code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Next lesson: <a href="lesson-2.html" style="color:var(--sel)"><b>Lesson 2: ORDER BY and LIMIT</b></a>, or how to ask for “the 3 cheapest drinks”.</footer>
+  <p class="madeby">SQL Caf&eacute; is a free course by <a href="https://masshai.com">MASSH AI</a>. Want SQL or data training for your team? <a href="https://masshai.com/#contact">Please get in touch</a>.</p>
+</main>
+
+<script>
+(function(){
+const MENU = {
+  cols:['id','item','type','price','calories'],
+  num:{id:1,price:1,calories:1},
+  rows:[
+    {id:1,item:'Espresso',type:'drink',price:2.5,calories:5},
+    {id:2,item:'Cappuccino',type:'drink',price:3.5,calories:120},
+    {id:3,item:'Iced Latte',type:'drink',price:4.5,calories:180},
+    {id:4,item:'Hot Chocolate',type:'drink',price:4,calories:310},
+    {id:5,item:'Croissant',type:'food',price:3,calories:270},
+    {id:6,item:'Bagel',type:'food',price:3.5,calories:250},
+    {id:7,item:'Carrot Cake',type:'food',price:5.5,calories:420},
+    {id:8,item:'Fruit Cup',type:'food',price:4,calories:90}
+  ]
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let speed = 1;
+const sleep = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms * speed));
+
+/* mini diagrams */
+function mini(id, fn){ const el=document.getElementById(id); let h=''; for(let r=0;r<5;r++) for(let c=0;c<5;c++) h+='<i class="'+(fn(r,c)?'on':'')+'"></i>'; el.innerHTML=h; }
+mini('mini-sel',(r,c)=>c===1||c===3);
+mini('mini-from',()=>false);
+mini('mini-where',(r)=>r===1||r===3);
+
+/* ---------- tiny SQL reader (SELECT ... FROM ... WHERE ...) ---------- */
+function lev(a,b){const m=[];for(let i=0;i<=a.length;i++){m[i]=[i];for(let j=1;j<=b.length;j++)m[i][j]=i?Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+(a[i-1]===b[j-1]?0:1)):j}return m[a.length][b.length]}
+function suggest(w){let best=null,d=9;for(const c of MENU.cols){const x=lev(w,c);if(x<d){d=x;best=c}}return d<=2?best:null}
+function badCol(w){const s=suggest(w);return 'There is no column called "'+w+'".'+(s?' Did you mean '+s+'?':' The columns are: '+MENU.cols.join(', ')+'.')}
+
+function parse(src){
+  let s = src.trim().replace(/;\s*$/,'').trim();
+  if(!s) throw Error('Please type a query first, starting with SELECT.');
+  if(!/^select\b/i.test(s)) throw Error('Please start with SELECT. It answers "What do you want to see?"');
+  if(!/\bfrom\b/i.test(s)) throw Error('Please add FROM to say which table, for example: FROM menu');
+  const m = s.match(/^select\s+([\s\S]+?)\s+from\s+([A-Za-z_]\w*)(?:\s+([\s\S]*))?$/i);
+  if(!m) throw Error('The pattern is: SELECT columns FROM table WHERE test');
+  const colPart=m[1].trim(), table=m[2], rest=(m[3]||'').trim();
+  if(table.toLowerCase()!=='menu') throw Error('There is no table called "'+table+'". Our table is menu.');
+  let cols, star=false;
+  if(colPart==='*'){cols=MENU.cols.slice();star=true}
+  else{
+    cols=colPart.split(',').map(x=>x.trim().toLowerCase());
+    if(cols.some(c=>!c)) throw Error('There is an extra comma in your column list. Commas go between column names only.');
+    for(const c of cols){ if(c==='*') throw Error('Please use * on its own, not mixed with column names.'); if(/\s/.test(c)) throw Error('"'+c+'" looks like two words. Did you forget a comma between columns?'); if(!MENU.cols.includes(c)) throw Error(badCol(c)); }
+  }
+  let where=null, whereSrc='';
+  if(rest){
+    const wm=rest.match(/^where\s+([\s\S]+)$/i);
+    if(!wm){ if(/^where$/i.test(rest)) throw Error('WHERE needs a test after it, like: WHERE price < 4'); throw Error('After FROM menu I expected WHERE, but found "'+rest.split(/\s+/)[0]+'".'); }
+    whereSrc=wm[1].trim(); where=parseWhere(whereSrc);
+  }
+  return {cols, star, where, whereSrc};
+}
+function tokenize(s){
+  const re=/\s*('[^']*'|"[^"]*"|<=|>=|!=|<>|=|<|>|-?\d+(?:\.\d+)?|[A-Za-z_]\w*)/y; const out=[];
+  re.lastIndex=0;
+  while(re.lastIndex<s.length){
+    const start=re.lastIndex; const m=re.exec(s);
+    if(!m){ const bad=s.slice(start).trim(); if(!bad) break;
+      if(bad[0]==="'"||bad[0]==='"') throw Error('A quote was opened but never closed. Text needs a quote on both sides: \'drink\'');
+      throw Error('I don\'t understand "'+bad.slice(0,12)+'" in your WHERE test.'); }
+    out.push(m[1]);
+  }
+  return out;
+}
+function parseWhere(s){
+  const t=tokenize(s); let i=0; const groups=[[]];
+  const OPS=['=','!=','<>','<','>','<=','>='];
+  while(true){
+    const col=t[i++];
+    if(!col) throw Error('WHERE needs a full test, like: price < 4');
+    const lc=col.toLowerCase();
+    if(!/^[A-Za-z_]/.test(col)) throw Error('A test starts with a column name, like: price < 4');
+    if(!MENU.cols.includes(lc)) throw Error(badCol(lc));
+    let op=t[i++];
+    if(!op) throw Error('After "'+col+'" please add a comparison, like = or <');
+    if(op.toLowerCase()==='like') op='like';
+    else if(op==='==') op='=';
+    else if(!OPS.includes(op)) throw Error('"'+op+'" is not a comparison. Please use = != < > <= or >=');
+    const v=t[i++];
+    if(v===undefined) throw Error('Please finish the test: '+col+' '+op+' ... what?');
+    let val;
+    if(/^['"]/.test(v)) val=v.slice(1,-1);
+    else if(/^-?\d/.test(v)) val=parseFloat(v);
+    else if(MENU.cols.includes(v.toLowerCase())) throw Error('This lesson compares a column with a value. Please write a value after the comparison, like: price < 4');
+    else throw Error('Text needs quotes: please write \''+v+'\' instead of '+v+'.');
+    groups[groups.length-1].push({col:lc,op,val});
+    const j=t[i];
+    if(j===undefined) break;
+    const jl=j.toLowerCase();
+    if(jl==='and'){i++} else if(jl==='or'){i++;groups.push([])}
+    else throw Error('Please join two tests with AND or OR. I found "'+j+'".');
+  }
+  return groups;
+}
+function test(row,c){
+  let a=row[c.col], b=c.val;
+  if(MENU.num[c.col] && typeof b==='string' && b.trim()!=='' && !isNaN(b)) b=parseFloat(b);
+  if(c.op==='like'){ const re=new RegExp('^'+String(b).replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/%/g,'.*').replace(/_/g,'.')+'$','i'); return re.test(String(a)); }
+  if(typeof a==='string'){a=a.toLowerCase(); b=String(b).toLowerCase();}
+  switch(c.op){case '=':return a===b;case '!=':case '<>':return a!==b;case '<':return a<b;case '>':return a>b;case '<=':return a<=b;case '>=':return a>=b}
+  return false;
+}
+const passes=(row,where)=>!where||where.some(g=>g.every(c=>test(row,c)));
+
+/* ---------- plain English ---------- */
+const OPW={'=':'is','!=':'is not','<>':'is not','<':'is less than','>':'is more than','<=':'is at most','>=':'is at least','like':'looks like'};
+function list(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1]}
+function whereWords(where){
+  return where.map(g=>g.map(c=>c.col+' '+OPW[c.op]+' '+(typeof c.val==='string'?'“'+esc(c.val)+'”':c.val)).join(' <b>and</b> ')).join(' <b>or</b> ');
+}
+function english(q){
+  let s='Please show me <span class="k-sel">'+(q.star?'every column':list(q.cols))+'</span> <span class="k-from">from the menu</span>';
+  if(q.where) s+=' <span class="k-where">where '+whereWords(q.where)+'</span>';
+  return '<span class="lbl">In plain English</span>'+s+'.';
+}
+
+/* ---------- animated run ---------- */
+const stage=$('#stage'), tw=$('#tw'), steps=[...document.querySelectorAll('#steps li')];
+let runId=0;
+function cell(col,v){return '<td data-col="'+col+'"'+(MENU.num[col]?' class="num"':'')+'>'+(col==='price'?'£'+v.toFixed(2):esc(v))+'</td>'}
+function setStep(i,state,html){steps[i].className=state; if(html!==undefined) steps[i].querySelector('.t').innerHTML=html}
+function resetSteps(){
+  setStep(0,'','<span class="chip from">FROM</span> Open the table');
+  setStep(1,'','<span class="chip where">WHERE</span> Keep only the rows that pass');
+  setStep(2,'','<span class="chip sel">SELECT</span> Keep only the columns you asked for');
+}
+function drawFull(){
+  let h='<table class="data"><thead><tr><th class="mark"></th>'+MENU.cols.map(c=>'<th data-col="'+c+'">'+c+'</th>').join('')+'</tr></thead><tbody>';
+  for(const r of MENU.rows) h+='<tr data-id="'+r.id+'"><td class="mark"></td>'+MENU.cols.map(c=>cell(c,r[c])).join('')+'</tr>';
+  stage.innerHTML=h+'</tbody></table>';
+}
+function drawResult(q,rows){
+  if(!rows.length){stage.innerHTML='<p style="padding:20px;color:var(--muted)">No rows passed the WHERE test, so the answer is empty. That is a real answer too!</p>';return}
+  let h='<table class="data result"><thead><tr>'+q.cols.map(c=>'<th>'+c+'</th>').join('')+'</tr></thead><tbody>';
+  rows.forEach((r,i)=>{h+='<tr style="animation-delay:'+(i*40)+'ms">'+q.cols.map(c=>cell(c,r[c])).join('')+'</tr>'});
+  stage.innerHTML=h+'</tbody></table>';
+}
+async function animate(q,rows){
+  const id=++runId; const alive=()=>id===runId;
+  resetSteps(); drawFull(); tw.classList.remove('lit'); $('#count').textContent='';
+  await sleep(200); if(!alive())return;
+  setStep(0,'active','<span class="chip from">FROM menu</span> Open the menu table: 8 rows, 5 columns.');
+  tw.classList.add('lit'); await sleep(900); if(!alive())return;
+  setStep(0,'done'); tw.classList.remove('lit');
+
+  const trs=[...stage.querySelectorAll('tbody tr')];
+  if(q.where){
+    setStep(1,'active','<span class="chip where">WHERE '+esc(q.whereSrc)+'</span> Test each row, one by one…');
+    let kept=0;
+    for(const tr of trs){
+      const row=MENU.rows.find(r=>r.id==tr.dataset.id);
+      tr.classList.add('checking'); await sleep(320); if(!alive())return;
+      tr.classList.remove('checking');
+      const ok=passes(row,q.where); if(ok)kept++;
+      tr.classList.add(ok?'keep':'drop'); tr.querySelector('.mark').textContent=ok?'✓':'✗';
+    }
+    setStep(1,'active','<span class="chip where">WHERE '+esc(q.whereSrc)+'</span> '+kept+' row'+(kept===1?'':'s')+' passed, '+(trs.length-kept)+' thrown away.');
+    await sleep(900); if(!alive())return;
+    trs.forEach(tr=>{if(tr.classList.contains('drop'))tr.hidden=true});
+    setStep(1,'done');
+  } else {
+    setStep(1,'done','<span class="chip where">no WHERE</span> No test, so every row stays.');
+    await sleep(500); if(!alive())return;
+  }
+  setStep(2,'active','<span class="chip sel">SELECT '+(q.star?'*':esc(q.cols.join(', ')))+'</span> '+(q.star?'Star means every column, so nothing is removed.':'Keep '+list(q.cols)+'. Fade out the rest.'));
+  stage.querySelectorAll('[data-col]').forEach(el=>{
+    if(q.cols.includes(el.dataset.col)){ if(el.tagName==='TH') el.classList.add('col-keep') }
+    else el.classList.add('col-drop');
+  });
+  await sleep(1100); if(!alive())return;
+  setStep(2,'done');
+  drawResult(q,rows);
+  $('#count').innerHTML='Answer: <span class="k-sel">'+rows.length+' row'+(rows.length===1?'':'s')+'</span> × <span class="k-sel">'+q.cols.length+' column'+(q.cols.length===1?'':'s')+'</span>';
+}
+
+/* ---------- missions ---------- */
+const MISSIONS=[
+  {title:'Please show the name of everything on the menu. Just the names, thank you.', rows:[1,2,3,4,5,6,7,8], cols:['item'], exact:true,
+   hint:'You only need SELECT and FROM. No WHERE, because you want every row.', answer:'SELECT item FROM menu;'},
+  {title:'Please show the item and price of every drink.', rows:[1,2,3,4], cols:['item','price'], exact:true,
+   hint:'Drinks have type \'drink\'. Text needs quotes!', answer:"SELECT item, price FROM menu WHERE type = 'drink';"},
+  {title:'Please find all the food that costs less than £5, and show at least the item.', rows:[5,6,8], cols:['item'], exact:false,
+   hint:'Two tests that must both be true: join them with AND.', answer:"SELECT * FROM menu WHERE type = 'food' AND price < 5;"},
+  {title:'Watching calories? Please show the item and calories for anything under 200 calories.', rows:[1,2,3,8], cols:['item','calories'], exact:true,
+   hint:'The test is on the calories column. Numbers don\'t need quotes.', answer:'SELECT item, calories FROM menu WHERE calories < 200;'}
+];
+let cur=0; const won=new Set();
+try{ JSON.parse(localStorage.getItem('sqlcafe1-won')||'[]').forEach(i=>won.add(i)) }catch(e){}
+function saveWon(){ try{ localStorage.setItem('sqlcafe1-won',JSON.stringify([...won])) }catch(e){} }
+function drawMission(){
+  const m=MISSIONS[cur];
+  $('#m-title').textContent=m.title;
+  $('#m-hint').hidden=true; $('#m-hint').textContent='';
+  $('#dots').innerHTML=MISSIONS.map((_,i)=>'<button type="button" aria-label="Mission '+(i+1)+(won.has(i)?' (done)':'')+'" class="'+(i===cur?'cur ':'')+(won.has(i)?'won':'')+'" data-i="'+i+'">'+(won.has(i)?'✓':i+1)+'</button>').join('');
+}
+$('#dots').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cur=+b.dataset.i;drawMission();$('#msg').innerHTML=''});
+$('#m-hint-btn').onclick=()=>{const h=$('#m-hint');h.hidden=false;h.textContent='Hint: '+MISSIONS[cur].hint};
+$('#m-ans-btn').onclick=()=>{const h=$('#m-hint');h.hidden=false;h.innerHTML='Answer: <code>'+esc(MISSIONS[cur].answer)+'</code>. Please type it in yourself, as typing helps you remember.'};
+function check(q,rows){
+  const m=MISSIONS[cur]; const got=rows.map(r=>r.id).sort((a,b)=>a-b).join(','), want=m.rows.join(',');
+  const colsOk=m.exact? (q.cols.length===m.cols.length && m.cols.every(c=>q.cols.includes(c))) : m.cols.every(c=>q.cols.includes(c));
+  if(got===want && colsOk){
+    won.add(cur); saveWon();
+    const next=MISSIONS.map((_,k)=>(cur+1+k)%MISSIONS.length).find(i=>!won.has(i)) ?? -1;
+    $('#msg').innerHTML='<div class="msg win">Mission '+(cur+1)+' done! '+(next<0?'You finished all four. You can now write real SQL.':'On to the next one.')+'</div>';
+    if(next>=0) cur=next; drawMission();
+  } else if(got===want){
+    $('#msg').innerHTML='<div class="msg near">Right rows! Now please fix your <span class="k-sel">SELECT</span>: this mission wants '+list(m.cols)+(m.exact?' and nothing else.':'.')+'</div>';
+  } else if(colsOk){
+    $('#msg').innerHTML='<div class="msg near">Right columns! '+(rows.length===m.rows.length?'You have the right number of rows, but not the right ones.':'But you got '+rows.length+' row'+(rows.length===1?'':'s')+' and the answer has '+m.rows.length+'.')+' Please check your <span class="k-where">WHERE</span>.</div>';
+  } else {
+    $('#msg').innerHTML='<div class="msg near">Not quite yet. This mission wants '+m.rows.length+' rows showing '+list(m.cols)+'. Would a hint help?</div>';
+  }
+}
+
+/* ---------- wiring ---------- */
+const ta=$('#sql');
+function run(slow){
+  speed=slow?1.8:1;
+  let q; try{ q=parse(ta.value) }catch(e){ runId++; $('#msg').innerHTML='<div class="msg err">'+esc(e.message)+'</div>'; return }
+  $('#english').innerHTML=english(q);
+  const rows=MENU.rows.filter(r=>passes(r,q.where));
+  $('#msg').innerHTML='';
+  const my=runId+1;
+  animate(q,rows).then(()=>{ if(!slow && runId===my) check(q,rows) });
+}
+$('#run').onclick=()=>run(false);
+$('#replay').onclick=()=>run(true);
+ta.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();run(false)}});
+ta.addEventListener('input',()=>{try{$('#english').innerHTML=english(parse(ta.value))}catch(e){}});
+const EX=["SELECT * FROM menu;","SELECT item FROM menu;","SELECT item, price FROM menu WHERE type = 'food';","SELECT * FROM menu WHERE price >= 4;","SELECT item FROM menu WHERE type = 'drink' OR calories < 100;","SELECT item, price FROM menu WHERE item LIKE 'C%';"];
+$('#examples').innerHTML=EX.map(x=>'<button type="button">'+esc(x)+'</button>').join('');
+$('#examples').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ta.value=b.textContent;run(false)});
+
+/* initial still frame: show the full table and the English sentence */
+resetSteps(); drawFull(); $('#english').innerHTML=english(parse(ta.value)); drawMission();
+
+/* ---------- word-by-word reader ---------- */
+const READ=[
+  {t:'SELECT',c:'sel',kind:'Main word',what:'Means “please show me”. Every question starts with it.',tip:'It answers: What do you want to see?',say:'Please show me'},
+  {t:'item',c:'name',kind:'Column name',what:'The name of a column in the table: the name of each thing on the menu.',tip:'Names are written exactly as they appear in the table, with no quotes.',say:'the item'},
+  {t:',',j:1,c:'sym',kind:'Comma',what:'Separates a list, like “tea, milk, sugar”. Read it as “and”.',tip:'It goes between two names. Never put one after the last name.',say:'and'},
+  {t:'price',c:'name',kind:'Column name',what:'A second column. Thanks to the comma, we get both.',tip:'You can list as many columns as you like: item, price, calories',say:'the price'},
+  {t:'FROM',c:'from',kind:'Main word',what:'Says where the data lives.',tip:'It answers: Where is it?',say:'from the'},
+  {t:'menu',c:'name',kind:'Table name',what:'The name of the table to look in.',tip:'A table is like one sheet in a spreadsheet.',say:'menu,'},
+  {t:'WHERE',c:'where',kind:'Main word',what:'Starts a test. Only rows that pass the test stay.',tip:'It answers: Which ones? Leave it out to keep every row.',say:'but only where'},
+  {t:'price',c:'name',kind:'Column name',what:'The column we test. Each row\'s price gets checked.',tip:'The test always starts with the column you are checking.',say:'the price'},
+  {t:'<',c:'sym',kind:'Comparison',what:'“Less than.” The pointy end faces the smaller side.',tip:'Others: =  is,  >  more than,  !=  is not',say:'is less than'},
+  {t:'4',c:'name',kind:'A number',what:'The value to compare with: 4 pounds.',tip:'Numbers have no quotes. Text does: \'drink\'',say:'4'},
+  {t:';',j:1,c:'sym',kind:'Semicolon',what:'The full stop. It means “my question is finished”.',tip:'Read it as “Done.”',say:'. Done!'}
+];
+let rStep=0;
+const bigq=$('#bigq');
+bigq.innerHTML=READ.map((r,i)=>'<button type="button" class="tok t-'+r.c+(r.j?' join':'')+'" data-i="'+i+'" aria-label="'+esc(r.kind+': '+r.t)+'">'+esc(r.t)+'</button>').join('');
+const toks=[...bigq.querySelectorAll('.tok')];
+function drawReader(){
+  const r=READ[rStep];
+  toks.forEach((el,i)=>{el.classList.toggle('seen',i<=rStep);el.classList.toggle('on',i===rStep)});
+  $('#r-kind').textContent=r.kind;
+  const big=$('#r-big'); big.textContent=r.t; big.className='big k-'+r.c;
+  $('#r-what').textContent=r.what; $('#r-tip').textContent=r.tip;
+  let s=''; READ.slice(0,rStep+1).forEach((x,i)=>{const w=esc(x.say); const sep=(i===0||/^[.,]/.test(x.say))?'':' '; s+=sep+(i===rStep?'<span class="new">'+w+'</span>':w)});
+  $('#r-say').innerHTML='“'+s+(rStep===READ.length-1?'':' …')+'”';
+  $('#r-prog').textContent='Piece '+(rStep+1)+' of '+READ.length;
+  $('#r-back').disabled=rStep===0;
+  $('#r-next').textContent=rStep===READ.length-1?'Start again ↺':'Next ▶';
+}
+$('#r-next').onclick=()=>{rStep=rStep===READ.length-1?0:rStep+1;drawReader()};
+$('#r-back').onclick=()=>{if(rStep>0){rStep--;drawReader()}};
+bigq.addEventListener('click',e=>{const b=e.target.closest('.tok');if(!b)return;rStep=+b.dataset.i;drawReader()});
+drawReader();
+
+/* ---------- quiz ---------- */
+const QUIZ=[
+  {p:'You want to see only the price column. Which word does that?',o:['SELECT','FROM','WHERE'],a:0,why:'SELECT answers “What do you want to see?” It picks columns.'},
+  {p:'You only want drinks, not food. Which word does that?',o:['SELECT','FROM','WHERE'],a:2,why:'WHERE answers “Which ones?” It keeps only the rows that pass the test.'},
+  {p:'Which query is in the right order?',o:['FROM menu SELECT item WHERE price < 4','SELECT item FROM menu WHERE price < 4','SELECT item WHERE price < 4 FROM menu'],a:1,mono:1,why:'What? → Where is it? → Which ones? That is SELECT → FROM → WHERE.'},
+  {p:'In SELECT item, price … what does the comma mean?',o:['“or”: show item or price','It ends the query','“and”: show item and price'],a:2,why:'A comma separates a list, so read it as “and”. The semicolon ; is what ends the query.'},
+  {p:"Can you spot the mistake? SELECT item FROM menu WHERE type = drink",o:['WHERE should come before FROM','drink needs quotes around it','item should be *'],a:1,why:"Text goes in 'quotes'. Numbers don't. The fix is type = 'drink'."}
+];
+let right=0, answered=0;
+$('#quiz').innerHTML=QUIZ.map((q,i)=>'<div class="qz" data-q="'+i+'"><span class="eyebrow">Question '+(i+1)+'</span><span class="prompt">'+esc(q.p)+'</span><div class="opts">'+q.o.map((o,j)=>'<button type="button" class="'+(q.mono?'mono':'')+'" data-j="'+j+'">'+esc(o)+'</button>').join('')+'</div><p class="why" hidden></p></div>').join('');
+$('#quiz').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b||b.disabled)return;
+  const box=b.closest('.qz'), q=QUIZ[+box.dataset.q], j=+b.dataset.j;
+  box.querySelectorAll('button').forEach((x,k)=>{x.disabled=true; if(k===q.a)x.classList.add('right')});
+  if(j!==q.a)b.classList.add('wrong'); else right++;
+  answered++;
+  const w=box.querySelector('.why'); w.hidden=false; w.textContent=(j===q.a?'Yes! ':'Not this time. ')+q.why;
+  if(answered===QUIZ.length) $('#score').textContent='You got '+right+' of '+QUIZ.length+'. '+(right===QUIZ.length?'Perfect. You know Lesson 1.':'Please come back tomorrow and try again. Each try makes it stick.');
+});
+})();
+</script>
+
+</body>
+</html>
